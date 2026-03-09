@@ -115,26 +115,21 @@ let elapsed=0,lastTimestamp=null,fullScript='';
 let isMuted=false,audioCtx=null,musicNodes=[];
 
 async function callAI(prompt){
-  // text.pollinations.ai/openai - correct OpenAI-compatible endpoint, free, no key
-  const models=['openai','mistral','deepseek','llama'];
+  // text.pollinations.ai GET endpoint - truly free, no key, no signup
+  // Anonymous tier: one request per 15s, no auth needed
+  const models=['openai','mistral','deepseek'];
   let lastErr=null;
   for(const model of models){
     try{
-      const res=await fetch('https://text.pollinations.ai/openai',{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({
-          model:model,
-          messages:[{role:'user',content:prompt}],
-          temperature:0.85,
-          max_tokens:2500,
-          private:true
-        })
-      });
+      const url='https://text.pollinations.ai/'+encodeURIComponent(prompt)
+        +'?model='+model+'&json=true&seed='+Math.floor(Math.random()*9999);
+      const res=await fetch(url,{method:'GET'});
       if(!res.ok) throw new Error('HTTP '+res.status);
-      const d=await res.json();
-      const text=d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content?d.choices[0].message.content:'';
-      if(text){console.log('Used Pollinations model:',model);return text;}
+      const text=await res.text();
+      if(text&&text.trim().length>10){
+        console.log('Used Pollinations GET model:',model);
+        return text.trim();
+      }
       throw new Error('Empty response');
     }catch(e){console.warn('Model '+model+' failed:',e.message);lastErr=e;}
   }

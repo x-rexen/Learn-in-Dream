@@ -148,16 +148,26 @@ async function generateVideo(){
   document.getElementById('loading-text').textContent='Weaving your dream lesson...';
   document.getElementById('output-area').scrollIntoView({behavior:'smooth',block:'start'});
 
-  const prompt='Create a video to teach me about: '+topic+'. And start with a big title of \'Learn in Dream\', it should be 1-2 min long.\n\nReturn ONLY a valid JSON object. No markdown, no backticks, no extra text. Just raw JSON:\n{"slides":[{"type":"title","headline":"Learn in Dream","subtitle":"subtitle here","duration":5},{"type":"content","headline":"Section Title","bullets":["Point one","Point two","Point three"],"duration":12}],"fullScript":"full narration here"}\n\nRules:\n- First slide MUST be type "title" with headline exactly "Learn in Dream"\n- 9-12 total slides\n- Types: title, content, quote, fact\n- content: headline + 2-4 bullets max 12 words each\n- quote: headline, quote max 20 words, attribution\n- fact: headline, fact max 15 words, context max 20 words\n- Each slide 7-13 sec, total 80-110 seconds\n- fullScript: 240-320 words poetic narration';
+  const prompt='You are a JSON API. Return ONLY raw JSON, no markdown, no backticks, no explanation. Teach about: '+topic+'. Format: {"slides":[{"type":"title","headline":"Learn in Dream","subtitle":"A journey into '+topic+'","duration":6},{"type":"content","headline":"What is it?","bullets":["Key point one here","Key point two here","Key point three"],"duration":11},{"type":"fact","headline":"Did You Know","fact":"An amazing fact about this topic","context":"More context about it","duration":10},{"type":"content","headline":"How It Works","bullets":["First mechanism","Second mechanism","Third mechanism"],"duration":11},{"type":"quote","headline":"Wisdom","quote":"A relevant quote about this topic","attribution":"Famous Person","duration":9},{"type":"content","headline":"Why It Matters","bullets":["Real world impact one","Real world impact two","Real world impact three"],"duration":11},{"type":"fact","headline":"Key Number","fact":"A striking statistic about this topic","context":"What this means for us","duration":10},{"type":"content","headline":"Key Takeaways","bullets":["Most important lesson","Second lesson","Third lesson"],"duration":11},{"type":"title","headline":"Sweet Dreams","subtitle":"You now understand '+topic+'","duration":6}],"fullScript":"A 260 word poetic narration of the entire lesson"}';
 
   try{
     document.getElementById('loading-text').textContent='Generating lesson...';
     const raw=await callAI(prompt);
-    const match=raw.match(/\{[\s\S]*\}/);
+    // Strip any markdown fences if present
+    let cleaned=raw.trim();
+    cleaned=cleaned.replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/\s*```$/,'').trim();
+    const match=cleaned.match(/\{[\s\S]*\}/);
     if(!match) throw new Error('No JSON found in response');
-    const parsed=JSON.parse(match[0]);
+    let parsed;
+    try{parsed=JSON.parse(match[0]);}
+    catch(e){
+      // Try to fix truncated JSON by finding last complete slide
+      const partial=match[0].replace(/,?\s*\{[^}]*$/,'').replace(/,?\s*"fullScript"[^}]*$/,'');
+      const fixed=partial+(partial.includes('"fullScript"')?''}':',"fullScript":"A dream lesson about '+topic+'"}');
+      parsed=JSON.parse(fixed+'}}');
+    }
     slides=parsed.slides||[];
-    fullScript=parsed.fullScript||'';
+    fullScript=parsed.fullScript||'Welcome to Learn in Dream. Tonight we explore '+topic+'.';
     if(!slides.length) throw new Error('No slides returned');
     totalDuration=slides.reduce(function(s,sl){return s+(sl.duration||9);},0);
     if(fullScript){document.getElementById('transcript-box').textContent=fullScript;document.getElementById('transcript-area').style.display='block';}

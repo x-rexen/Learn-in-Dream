@@ -51,6 +51,19 @@ input[type="text"]:focus{border-color:rgba(201,168,76,.5);background:rgba(255,25
 .transcript-box{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:22px;font-size:.88rem;line-height:1.85;color:rgba(184,196,212,.7);max-height:240px;overflow-y:auto;}
 .transcript-box::-webkit-scrollbar{width:4px;}
 .transcript-box::-webkit-scrollbar-thumb{background:rgba(201,168,76,.3);border-radius:2px;}
+.api-setup{width:100%;margin-bottom:20px;}
+.api-setup summary{font-size:.75rem;font-weight:500;color:rgba(201,168,76,.7);letter-spacing:.1em;text-transform:uppercase;cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding:10px 0;}
+.api-setup summary::-webkit-details-marker{display:none;}
+.api-setup summary::before{content:"⚙";}
+.api-setup summary::after{content:"▾";margin-left:auto;transition:transform .2s;}
+.api-setup[open] summary::after{transform:rotate(-180deg);}
+.api-setup-body{background:rgba(255,255,255,.04);border:1px solid rgba(201,168,76,.2);border-radius:16px;padding:20px 24px;display:flex;flex-direction:column;gap:14px;}
+.api-row{display:flex;flex-direction:column;gap:5px;}
+.api-label{font-size:.7rem;color:rgba(184,196,212,.55);letter-spacing:.06em;text-transform:uppercase;}
+.api-input{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:10px 14px;font-family:monospace;font-size:.82rem;color:var(--paper);outline:none;transition:border-color .3s;caret-color:var(--gold);width:100%;}
+.api-input:focus{border-color:rgba(201,168,76,.5);}
+.api-hint{font-size:.7rem;color:rgba(184,196,212,.35);line-height:1.5;}
+.api-hint a{color:rgba(201,168,76,.6);text-decoration:none;}
 </style>
 </head>
 <body>
@@ -59,6 +72,21 @@ input[type="text"]:focus{border-color:rgba(201,168,76,.5);background:rgba(255,25
   <div class="moon"></div>
   <h1>Learn in Dream</h1>
   <p class="tagline">where knowledge blooms while the world sleeps</p>
+  <details class="api-setup" id="api-setup">
+    <summary>&#10022; API Key Setup</summary>
+    <div class="api-setup-body">
+      <div class="api-row">
+        <label class="api-label">OpenRouter API Key (free models)</label>
+        <input class="api-input" id="or-key-input" type="password" placeholder="sk-or-v1-..." autocomplete="off" />
+        <div class="api-hint">Get a free key at <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a> &mdash; no credit card needed</div>
+      </div>
+      <div class="api-row">
+        <label class="api-label">Anthropic API Key (optional, higher quality)</label>
+        <input class="api-input" id="ant-key-input" type="password" placeholder="sk-ant-..." autocomplete="off" />
+        <div class="api-hint">Optional. Get one at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></div>
+      </div>
+    </div>
+  </details>
   <div class="input-card">
     <span class="prompt-prefix">&#10022; Tonight's lesson</span>
     <div class="input-row">
@@ -112,20 +140,28 @@ let isPlaying=false,animFrame=null,videoStarted=false;
 let elapsed=0,lastTimestamp=null,fullScript='';
 let isMuted=false,audioCtx=null,musicNodes=[];
 
-const OR_KEY='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';
 const OR_MODELS=[
   'meta-llama/llama-4-maverick:free',
   'meta-llama/llama-4-scout:free',
   'deepseek/deepseek-chat-v3-0324:free',
   'google/gemma-3-27b-it:free',
+  'mistralai/mistral-small-3.1-24b-instruct:free',
   'meta-llama/llama-3.3-70b-instruct:free'
 ];
 
-async function callAnthropic(prompt){
+function getKeys(){
+  return {
+    or: document.getElementById('or-key-input').value.trim(),
+    ant: document.getElementById('ant-key-input').value.trim()
+  };
+}
+
+async function callAnthropic(prompt, key){
   const res=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
     headers:{
       'Content-Type':'application/json',
+      'x-api-key': key,
       'anthropic-version':'2023-06-01',
       'anthropic-dangerous-direct-browser-access':'true'
     },
@@ -143,13 +179,13 @@ async function callAnthropic(prompt){
   return text;
 }
 
-async function callOpenRouter(prompt){
+async function callOpenRouter(prompt, key){
   let lastErr=null;
   for(const model of OR_MODELS){
     try{
       const res=await fetch('https://openrouter.ai/api/v1/chat/completions',{
         method:'POST',
-        headers:{'Content-Type':'application/json','Authorization':'Bearer '+OR_KEY,'HTTP-Referer':location.href,'X-Title':'Learn in Dream'},
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+key,'HTTP-Referer':location.href,'X-Title':'Learn in Dream'},
         body:JSON.stringify({model:model,messages:[{role:'user',content:prompt}],temperature:0.85,max_tokens:2500})
       });
       const d=await res.json();
@@ -163,11 +199,20 @@ async function callOpenRouter(prompt){
 }
 
 async function callAI(prompt){
-  // Try Anthropic first (best quality, works on HTTPS)
-  try{return await callAnthropic(prompt);}
-  catch(e){console.warn('Anthropic failed:',e.message,'→ trying OpenRouter...');}
-  // Fallback to OpenRouter
-  return await callOpenRouter(prompt);
+  const keys=getKeys();
+  if(!keys.ant && !keys.or){
+    throw new Error('Please enter an API key in the setup panel above. Get a free OpenRouter key at openrouter.ai/keys');
+  }
+  // Try Anthropic first if key provided
+  if(keys.ant){
+    try{return await callAnthropic(prompt, keys.ant);}
+    catch(e){console.warn('Anthropic failed:',e.message,'→ trying OpenRouter...');}
+  }
+  // Try OpenRouter
+  if(keys.or){
+    return await callOpenRouter(prompt, keys.or);
+  }
+  throw new Error('All API calls failed. Please check your API keys.');
 }
 
 async function generateVideo(){

@@ -139,20 +139,32 @@ async function callAI(topic) {
 
 function parseResponse(raw, topic) {
   var cleaned = raw.trim();
+
+  // If it is a reasoning wrapper like {"role":"assistant","reasoning_content":"...","content":"..."}
+  // extract the actual content field
+  try {
+    var wrapper = JSON.parse(cleaned);
+    if (wrapper.content) cleaned = wrapper.content;
+    else if (wrapper.choices && wrapper.choices[0]) cleaned = wrapper.choices[0].message.content;
+  } catch(e) { /* not a wrapper, continue */ }
+
   // Strip markdown fences
-  cleaned = cleaned.replace(/^```json/i,'').replace(/^```/,'').replace(/```$/,'').trim();
+  cleaned = cleaned.trim();
+  if (cleaned.indexOf('```') !== -1) {
+    cleaned = cleaned.replace(/```json/gi,'').replace(/```/g,'').trim();
+  }
+
   // Extract JSON object - grab everything between first { and last }
   var start = cleaned.indexOf('{');
   var end = cleaned.lastIndexOf('}');
-  if (start === -1 || end === -1) throw new Error('No JSON object found. Response was: ' + cleaned.substring(0,200));
+  if (start === -1 || end === -1) throw new Error('No JSON found. Got: ' + cleaned.substring(0,200));
   var jsonStr = cleaned.substring(start, end+1);
+
   var parsed;
-  try {
-    parsed = JSON.parse(jsonStr);
-  } catch(e) {
-    throw new Error('JSON parse failed: ' + e.message + ' | Raw: ' + cleaned.substring(0,200));
-  }
-  if (!parsed.slides || !parsed.slides.length) throw new Error('No slides in parsed JSON: ' + JSON.stringify(parsed).substring(0,200));
+  try { parsed = JSON.parse(jsonStr); }
+  catch(e) { throw new Error('Parse failed: ' + e.message + ' | ' + jsonStr.substring(0,200)); }
+
+  if (!parsed.slides || !parsed.slides.length) throw new Error('No slides. Got: ' + JSON.stringify(parsed).substring(0,200));
   return parsed;
 }
 

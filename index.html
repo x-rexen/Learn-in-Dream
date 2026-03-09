@@ -112,37 +112,48 @@ var isPlaying=false,animFrame=null,videoStarted=false;
 var elapsed=0,lastTimestamp=null,fullScript='';
 var isMuted=false,audioCtx=null,musicNodes=[];
 
-// Call Anthropic API — works on GitHub Pages, no key needed in browser
+// GitHub Models API — free with any GitHub account, works on GitHub Pages
+var GH_TOKEN = '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';
+var GH_MODELS = ['gpt-4o-mini','gpt-4o','Llama-3.3-70B-Instruct','DeepSeek-V3-0324'];
+
 async function callAI(topic) {
   var prompt = 'Create a dream lesson about: ' + topic + '. Return ONLY raw JSON, no markdown, no explanation. Schema: {"slides":[{"type":"title","headline":"Learn in Dream","subtitle":"...","duration":6},{"type":"content","headline":"...","bullets":["...","...","..."],"duration":11},{"type":"fact","headline":"...","fact":"...","context":"...","duration":10},{"type":"content","headline":"...","bullets":["...","...","..."],"duration":11},{"type":"quote","headline":"...","quote":"...","attribution":"...","duration":9},{"type":"content","headline":"...","bullets":["...","...","..."],"duration":11},{"type":"fact","headline":"...","fact":"...","context":"...","duration":10},{"type":"content","headline":"...","bullets":["...","...","..."],"duration":11},{"type":"title","headline":"Sweet Dreams","subtitle":"...","duration":6}],"fullScript":"200 word poetic narration"}';
 
-  var res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
-    body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 2000,
-      messages: [{ role: 'user', content: prompt }]
-    })
-  });
-
-  var d = await res.json();
-  if (!res.ok || d.error) throw new Error(d.error ? d.error.message : 'HTTP ' + res.status);
-  var raw = d.content && d.content[0] && d.content[0].text ? d.content[0].text : '';
-  if (!raw) throw new Error('Empty response');
-
-  // Parse JSON
-  var cleaned = raw.trim().replace(/^```json/i,'').replace(/^```/,'').replace(/```$/,'').trim();
-  var start = cleaned.indexOf('{');
-  var end = cleaned.lastIndexOf('}');
-  if (start === -1 || end === -1) throw new Error('No JSON in response');
-  var parsed = JSON.parse(cleaned.substring(start, end+1));
-  if (!parsed.slides || !parsed.slides.length) throw new Error('No slides in response');
-  return parsed;
+  var lastErr = null;
+  for (var i = 0; i < GH_MODELS.length; i++) {
+    var model = GH_MODELS[i];
+    try {
+      var res = await fetch('https://models.github.ai/inference/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + GH_TOKEN
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.8,
+          max_tokens: 2000
+        })
+      });
+      var d = await res.json();
+      if (!res.ok || d.error) throw new Error(d.error ? d.error.message : 'HTTP ' + res.status);
+      var raw = d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content ? d.choices[0].message.content : '';
+      if (!raw) throw new Error('Empty response');
+      var cleaned = raw.trim().replace(/^```json/i,'').replace(/^```/,'').replace(/```$/,'').trim();
+      var start = cleaned.indexOf('{');
+      var end = cleaned.lastIndexOf('}');
+      if (start === -1 || end === -1) throw new Error('No JSON in response');
+      var parsed = JSON.parse(cleaned.substring(start, end+1));
+      if (!parsed.slides || !parsed.slides.length) throw new Error('No slides in response');
+      console.log('Used GitHub model:', model);
+      return parsed;
+    } catch(e) {
+      console.warn('Model ' + model + ' failed:', e.message);
+      lastErr = e;
+    }
+  }
+  throw lastErr || new Error('All models failed');
 }
 
 async function generateVideo() {

@@ -72,21 +72,6 @@ input[type="text"]:focus{border-color:rgba(201,168,76,.5);background:rgba(255,25
   <div class="moon"></div>
   <h1>Learn in Dream</h1>
   <p class="tagline">where knowledge blooms while the world sleeps</p>
-  <details class="api-setup" id="api-setup">
-    <summary>&#10022; API Key Setup</summary>
-    <div class="api-setup-body">
-      <div class="api-row">
-        <label class="api-label">OpenRouter API Key (free models)</label>
-        <input class="api-input" id="or-key-input" type="password" placeholder="sk-or-v1-..." autocomplete="off" />
-        <div class="api-hint">Get a free key at <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a> &mdash; no credit card needed</div>
-      </div>
-      <div class="api-row">
-        <label class="api-label">Anthropic API Key (optional, higher quality)</label>
-        <input class="api-input" id="ant-key-input" type="password" placeholder="sk-ant-..." autocomplete="off" />
-        <div class="api-hint">Optional. Get one at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></div>
-      </div>
-    </div>
-  </details>
   <div class="input-card">
     <span class="prompt-prefix">&#10022; Tonight's lesson</span>
     <div class="input-row">
@@ -149,70 +134,25 @@ const OR_MODELS=[
   'meta-llama/llama-3.3-70b-instruct:free'
 ];
 
-function getKeys(){
-  return {
-    or: document.getElementById('or-key-input').value.trim(),
-    ant: document.getElementById('ant-key-input').value.trim()
-  };
-}
+const OR_KEY='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';
 
-async function callAnthropic(prompt, key){
-  const res=await fetch('https://api.anthropic.com/v1/messages',{
-    method:'POST',
-    headers:{
-      'Content-Type':'application/json',
-      'x-api-key': key,
-      'anthropic-version':'2023-06-01',
-      'anthropic-dangerous-direct-browser-access':'true'
-    },
-    body:JSON.stringify({
-      model:'claude-haiku-4-5-20251001',
-      max_tokens:2500,
-      messages:[{role:'user',content:prompt}]
-    })
-  });
-  const d=await res.json();
-  if(!res.ok||d.error) throw new Error(d&&d.error&&d.error.message?d.error.message:'HTTP '+res.status);
-  const text=d.content&&d.content[0]&&d.content[0].text?d.content[0].text:'';
-  if(!text) throw new Error('Empty response');
-  console.log('Used Anthropic claude-haiku');
-  return text;
-}
-
-async function callOpenRouter(prompt, key){
+async function callAI(prompt){
   let lastErr=null;
   for(const model of OR_MODELS){
     try{
       const res=await fetch('https://openrouter.ai/api/v1/chat/completions',{
         method:'POST',
-        headers:{'Content-Type':'application/json','Authorization':'Bearer '+key,'HTTP-Referer':location.href,'X-Title':'Learn in Dream'},
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+OR_KEY,'HTTP-Referer':location.href,'X-Title':'Learn in Dream'},
         body:JSON.stringify({model:model,messages:[{role:'user',content:prompt}],temperature:0.85,max_tokens:2500})
       });
       const d=await res.json();
       if(!res.ok||d.error) throw new Error(d&&d.error&&d.error.message?d.error.message:'HTTP '+res.status);
       const text=d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content?d.choices[0].message.content:'';
-      if(text){console.log('Used OpenRouter model:',model);return text;}
+      if(text){console.log('Used model:',model);return text;}
       throw new Error('Empty response');
     }catch(e){console.warn('Model '+model+' failed:',e.message);lastErr=e;}
   }
-  throw lastErr||new Error('All OpenRouter models failed');
-}
-
-async function callAI(prompt){
-  const keys=getKeys();
-  if(!keys.ant && !keys.or){
-    throw new Error('Please enter an API key in the setup panel above. Get a free OpenRouter key at openrouter.ai/keys');
-  }
-  // Try Anthropic first if key provided
-  if(keys.ant){
-    try{return await callAnthropic(prompt, keys.ant);}
-    catch(e){console.warn('Anthropic failed:',e.message,'→ trying OpenRouter...');}
-  }
-  // Try OpenRouter
-  if(keys.or){
-    return await callOpenRouter(prompt, keys.or);
-  }
-  throw new Error('All API calls failed. Please check your API keys.');
+  throw lastErr||new Error('All models failed');
 }
 
 async function generateVideo(){

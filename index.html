@@ -114,7 +114,7 @@ var elapsed=0, lastTimestamp=null, fullScript='';
 var isMuted=false, audioCtx=null, musicNodes=[];
 
 async function callAI(topic) {
-  var models = ['openai','mistral','deepseek'];
+  var models = ['mistral','deepseek','llama','midijourney'];
   var prompt = 'Return ONLY a JSON object (no markdown, no backticks) for a lesson about: ' + topic + '. Use this exact structure: {"slides":[{"type":"title","headline":"Learn in Dream","subtitle":"tonight we explore ' + topic + '","duration":6},{"type":"content","headline":"Introduction","bullets":["First key point","Second key point","Third key point"],"duration":11},{"type":"fact","headline":"Did You Know","fact":"An amazing fact about ' + topic + '","context":"Why this matters","duration":10},{"type":"content","headline":"Core Concepts","bullets":["Concept one explained","Concept two explained","Concept three explained"],"duration":11},{"type":"quote","headline":"Wisdom","quote":"A famous quote related to ' + topic + '","attribution":"Author Name","duration":9},{"type":"content","headline":"Real World Impact","bullets":["Application one","Application two","Application three"],"duration":11},{"type":"fact","headline":"Key Insight","fact":"A striking truth about ' + topic + '","context":"The deeper meaning","duration":10},{"type":"content","headline":"Key Takeaways","bullets":["Most important lesson","Second lesson","Third lesson"],"duration":11},{"type":"title","headline":"Sweet Dreams","subtitle":"you now understand ' + topic + '","duration":6}],"fullScript":"Write 260 words of poetic narration for this lesson here"}';
 
   var lastErr = null;

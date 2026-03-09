@@ -51,19 +51,6 @@ input[type="text"]:focus{border-color:rgba(201,168,76,.5);background:rgba(255,25
 .transcript-box{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:22px;font-size:.88rem;line-height:1.85;color:rgba(184,196,212,.7);max-height:240px;overflow-y:auto;}
 .transcript-box::-webkit-scrollbar{width:4px;}
 .transcript-box::-webkit-scrollbar-thumb{background:rgba(201,168,76,.3);border-radius:2px;}
-.api-setup{width:100%;margin-bottom:20px;}
-.api-setup summary{font-size:.75rem;font-weight:500;color:rgba(201,168,76,.7);letter-spacing:.1em;text-transform:uppercase;cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding:10px 0;}
-.api-setup summary::-webkit-details-marker{display:none;}
-.api-setup summary::before{content:"⚙";}
-.api-setup summary::after{content:"▾";margin-left:auto;transition:transform .2s;}
-.api-setup[open] summary::after{transform:rotate(-180deg);}
-.api-setup-body{background:rgba(255,255,255,.04);border:1px solid rgba(201,168,76,.2);border-radius:16px;padding:20px 24px;display:flex;flex-direction:column;gap:14px;}
-.api-row{display:flex;flex-direction:column;gap:5px;}
-.api-label{font-size:.7rem;color:rgba(184,196,212,.55);letter-spacing:.06em;text-transform:uppercase;}
-.api-input{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:10px 14px;font-family:monospace;font-size:.82rem;color:var(--paper);outline:none;transition:border-color .3s;caret-color:var(--gold);width:100%;}
-.api-input:focus{border-color:rgba(201,168,76,.5);}
-.api-hint{font-size:.7rem;color:rgba(184,196,212,.35);line-height:1.5;}
-.api-hint a{color:rgba(201,168,76,.6);text-decoration:none;}
 </style>
 </head>
 <body>
@@ -103,6 +90,8 @@ input[type="text"]:focus{border-color:rgba(201,168,76,.5);background:rgba(255,25
     </div>
   </div>
 </div>
+
+<!-- Puter.js: free AI, no API key needed -->
 <script>
 (function(){
   const s=document.getElementById('stars');
@@ -125,44 +114,32 @@ let isPlaying=false,animFrame=null,videoStarted=false;
 let elapsed=0,lastTimestamp=null,fullScript='';
 let isMuted=false,audioCtx=null,musicNodes=[];
 
-const OR_MODELS=[
-  'meta-llama/llama-4-maverick:free',
-  'meta-llama/llama-4-scout:free',
-  'deepseek/deepseek-chat-v3-0324:free',
-  'google/gemma-3-27b-it:free',
-  'mistralai/mistral-small-3.1-24b-instruct:free',
-  'meta-llama/llama-3.3-70b-instruct:free'
-];
-
-const GEMINI_KEY='AIzaSyAojqTuEGp10OYLhn7mya9TqiwLfwq6BKM';
-const GEMINI_MODELS=[
-  'gemini-2.0-flash-lite',
-  'gemini-2.0-flash',
-  'gemini-1.5-flash-latest',
-  'gemini-1.5-flash-8b-latest'
-];
-
 async function callAI(prompt){
+  // Pollinations.ai - 100% free, no API key, no signup
+  const models=['openai','mistral','deepseek','llama'];
   let lastErr=null;
-  for(const model of GEMINI_MODELS){
+  for(const model of models){
     try{
-      const res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+GEMINI_KEY,{
+      const res=await fetch('https://text.pollinations.ai/openai',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({
-          contents:[{parts:[{text:prompt}]}],
-          generationConfig:{temperature:0.85,maxOutputTokens:2500}
+          model:model,
+          messages:[{role:'user',content:prompt}],
+          temperature:0.85,
+          max_tokens:2500
         })
       });
       const d=await res.json();
       if(!res.ok||d.error) throw new Error(d&&d.error&&d.error.message?d.error.message:'HTTP '+res.status);
-      const text=d.candidates&&d.candidates[0]&&d.candidates[0].content&&d.candidates[0].content.parts&&d.candidates[0].content.parts[0]&&d.candidates[0].content.parts[0].text?d.candidates[0].content.parts[0].text:'';
-      if(text){console.log('Used Gemini model:',model);return text;}
+      const text=d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content?d.choices[0].message.content:'';
+      if(text){console.log('Used Pollinations model:',model);return text;}
       throw new Error('Empty response');
     }catch(e){console.warn('Model '+model+' failed:',e.message);lastErr=e;}
   }
-  throw lastErr||new Error('All Gemini models failed');
+  throw lastErr||new Error('All models failed');
 }
+
 async function generateVideo(){
   const topic=document.getElementById('topic-input').value.trim();
   const errEl=document.getElementById('error-msg');
@@ -196,6 +173,7 @@ async function generateVideo(){
     requestAnimationFrame(playLoop);
   }catch(e){
     showError('Error: '+e.message);
+    document.getElementById('loading-overlay').classList.add('hidden');
     document.getElementById('loading-text').textContent='Something went wrong. Please try again.';
     console.error(e);
   }

@@ -112,34 +112,37 @@ var isPlaying=false,animFrame=null,videoStarted=false;
 var elapsed=0,lastTimestamp=null,fullScript='';
 var isMuted=false,audioCtx=null,musicNodes=[];
 
-// Build slides locally — zero API dependency
-function buildSlides(topic) {
-  return [
-    {type:'title',   headline:'Learn in Dream', subtitle:'Tonight we explore: '+topic, duration:6},
-    {type:'content', headline:'What is '+topic+'?', bullets:['A fascinating area of human knowledge','Shapes how we understand our world','Has roots stretching back centuries'], duration:11},
-    {type:'fact',    headline:'Did You Know', fact:topic+' touches every corner of modern life', context:'From technology to culture, nothing is untouched', duration:10},
-    {type:'content', headline:'Core Ideas', bullets:['Built on foundational principles','Emerges from observation and curiosity','Connects theory with real-world practice'], duration:11},
-    {type:'quote',   headline:'Wisdom', quote:'The more I learn, the more I realize how much I do not know', attribution:'Albert Einstein', duration:9},
-    {type:'content', headline:'How It Works', bullets:['Systems interact in surprising ways','Small changes can have large effects','Patterns repeat at every scale'], duration:11},
-    {type:'fact',    headline:'Key Insight', fact:'Experts spend decades mastering just one corner of '+topic, context:'Yet beginners can grasp the essence in minutes', duration:10},
-    {type:'content', headline:'Why It Matters', bullets:['Solves real problems in daily life','Inspires innovation and creativity','Connects us to something larger than ourselves'], duration:11},
-    {type:'title',   headline:'Sweet Dreams', subtitle:'You now carry the seeds of '+topic, duration:6}
-  ];
-}
+// Call Anthropic API — works on GitHub Pages, no key needed in browser
+async function callAI(topic) {
+  var prompt = 'Create a dream lesson about: ' + topic + '. Return ONLY raw JSON, no markdown, no explanation. Schema: {"slides":[{"type":"title","headline":"Learn in Dream","subtitle":"...","duration":6},{"type":"content","headline":"...","bullets":["...","...","..."],"duration":11},{"type":"fact","headline":"...","fact":"...","context":"...","duration":10},{"type":"content","headline":"...","bullets":["...","...","..."],"duration":11},{"type":"quote","headline":"...","quote":"...","attribution":"...","duration":9},{"type":"content","headline":"...","bullets":["...","...","..."],"duration":11},{"type":"fact","headline":"...","fact":"...","context":"...","duration":10},{"type":"content","headline":"...","bullets":["...","...","..."],"duration":11},{"type":"title","headline":"Sweet Dreams","subtitle":"...","duration":6}],"fullScript":"200 word poetic narration"}';
 
-// Fetch a SHORT narration from Pollinations — small URL, no 404
-async function fetchNarration(topic) {
-  try {
-    var q = 'Write a 150-word poetic narration for a dream lesson about ' + topic;
-    var url = 'https://text.pollinations.ai/' + encodeURIComponent(q);
-    var res = await fetch(url);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    var text = await res.text();
-    if (text && text.trim().length > 20) return text.trim();
-  } catch(e) {
-    console.warn('Narration fetch failed, using fallback:', e.message);
-  }
-  return 'Welcome to Learn in Dream. Tonight we journey into the world of ' + topic + '. Close your eyes and let your mind open. Every concept is a doorway. Every idea, a new horizon. Knowledge flows like starlight — soft, endless, and full of wonder. As the world sleeps, you grow wiser. Let the dream begin.';
+  var res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 2000,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+
+  var d = await res.json();
+  if (!res.ok || d.error) throw new Error(d.error ? d.error.message : 'HTTP ' + res.status);
+  var raw = d.content && d.content[0] && d.content[0].text ? d.content[0].text : '';
+  if (!raw) throw new Error('Empty response');
+
+  // Parse JSON
+  var cleaned = raw.trim().replace(/^```json/i,'').replace(/^```/,'').replace(/```$/,'').trim();
+  var start = cleaned.indexOf('{');
+  var end = cleaned.lastIndexOf('}');
+  if (start === -1 || end === -1) throw new Error('No JSON in response');
+  var parsed = JSON.parse(cleaned.substring(start, end+1));
+  if (!parsed.slides || !parsed.slides.length) throw new Error('No slides in response');
+  return parsed;
 }
 
 async function generateVideo() {
@@ -156,9 +159,9 @@ async function generateVideo() {
   document.getElementById('loading-text').textContent = 'Weaving your dream lesson...';
   document.getElementById('output-area').scrollIntoView({behavior:'smooth',block:'start'});
 
-  var narration = await fetchNarration(topic);
-  slides = buildSlides(topic);
-  fullScript = narration;
+  var result = await callAI(topic);
+  slides = result.slides;
+  fullScript = result.fullScript || 'Welcome to Learn in Dream. Tonight we explore ' + topic + '.';
   totalDuration = slides.reduce(function(s,sl){return s+(sl.duration||9);},0);
 
   document.getElementById('transcript-box').textContent = fullScript;

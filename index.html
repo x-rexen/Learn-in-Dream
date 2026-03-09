@@ -127,6 +127,7 @@ async function callAI(topic) {
       var text = await res.text();
       if (!text || text.trim().length < 20) throw new Error('Empty response');
       console.log('Got response from model:', model);
+      console.log('RAW RESPONSE:', text.trim().substring(0,500));
       return text.trim();
     } catch(e) {
       console.warn('Model ' + model + ' failed:', e.message);
@@ -137,14 +138,21 @@ async function callAI(topic) {
 }
 
 function parseResponse(raw, topic) {
-  // Strip markdown fences
   var cleaned = raw.trim();
-  cleaned = cleaned.replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/\s*```\s*$/,'').trim();
-  // Extract JSON object
-  var match = cleaned.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error('No JSON found in response');
-  var parsed = JSON.parse(match[0]);
-  if (!parsed.slides || !parsed.slides.length) throw new Error('No slides returned');
+  // Strip markdown fences
+  cleaned = cleaned.replace(/^```json/i,'').replace(/^```/,'').replace(/```$/,'').trim();
+  // Extract JSON object - grab everything between first { and last }
+  var start = cleaned.indexOf('{');
+  var end = cleaned.lastIndexOf('}');
+  if (start === -1 || end === -1) throw new Error('No JSON object found. Response was: ' + cleaned.substring(0,200));
+  var jsonStr = cleaned.substring(start, end+1);
+  var parsed;
+  try {
+    parsed = JSON.parse(jsonStr);
+  } catch(e) {
+    throw new Error('JSON parse failed: ' + e.message + ' | Raw: ' + cleaned.substring(0,200));
+  }
+  if (!parsed.slides || !parsed.slides.length) throw new Error('No slides in parsed JSON: ' + JSON.stringify(parsed).substring(0,200));
   return parsed;
 }
 

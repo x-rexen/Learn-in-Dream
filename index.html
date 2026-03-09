@@ -6,795 +6,423 @@
 <title>Learn in Dream</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --ink: #0d0d1a;
-    --paper: #f5f0e8;
-    --gold: #c9a84c;
-    --dream: #7b5ea7;
-    --mist: #b8c4d4;
-    --glow: #e8d5ff;
-  }
-
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  body {
-    background: var(--ink);
-    color: var(--paper);
-    font-family: 'DM Sans', sans-serif;
-    min-height: 100vh;
-    overflow-x: hidden;
-    position: relative;
-  }
-
-  /* Starfield */
-  .stars {
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 0;
-  }
-  .star {
-    position: absolute;
-    border-radius: 50%;
-    background: white;
-    animation: twinkle var(--d, 3s) ease-in-out infinite;
-    opacity: 0;
-  }
-  @keyframes twinkle {
-    0%, 100% { opacity: 0; transform: scale(0.5); }
-    50% { opacity: var(--o, 0.8); transform: scale(1); }
-  }
-
-  /* Nebula bg */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background:
-      radial-gradient(ellipse 80% 50% at 20% 20%, rgba(123,94,167,0.15) 0%, transparent 60%),
-      radial-gradient(ellipse 60% 80% at 80% 80%, rgba(201,168,76,0.08) 0%, transparent 60%),
-      radial-gradient(ellipse 100% 100% at 50% 50%, rgba(13,13,26,1) 40%, rgba(20,10,40,1) 100%);
-    z-index: 0;
-    pointer-events: none;
-  }
-
-  .container {
-    position: relative;
-    z-index: 1;
-    max-width: 860px;
-    margin: 0 auto;
-    padding: 60px 24px 80px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-
-  /* Moon decoration */
-  .moon {
-    width: 80px; height: 80px;
-    border-radius: 50%;
-    background: radial-gradient(circle at 35% 35%, #f5e6c8, #c9a84c 60%, #8a6a20);
-    box-shadow: 0 0 40px rgba(201,168,76,0.4), 0 0 80px rgba(201,168,76,0.15);
-    margin-bottom: 28px;
-    position: relative;
-    animation: moonFloat 6s ease-in-out infinite;
-  }
-  .moon::after {
-    content: '';
-    position: absolute;
-    top: 12px; left: 18px;
-    width: 14px; height: 14px;
-    border-radius: 50%;
-    background: rgba(0,0,0,0.12);
-    box-shadow: 18px 20px 0 8px rgba(0,0,0,0.07), 32px 10px 0 5px rgba(0,0,0,0.05);
-  }
-  @keyframes moonFloat {
-    0%, 100% { transform: translateY(0px); box-shadow: 0 0 40px rgba(201,168,76,0.4), 0 0 80px rgba(201,168,76,0.15); }
-    50% { transform: translateY(-10px); box-shadow: 0 0 60px rgba(201,168,76,0.6), 0 0 120px rgba(201,168,76,0.25); }
-  }
-
-  /* Header */
-  h1 {
-    font-family: 'Playfair Display', serif;
-    font-size: clamp(2.8rem, 8vw, 5.5rem);
-    font-weight: 900;
-    line-height: 1;
-    text-align: center;
-    letter-spacing: -0.02em;
-    background: linear-gradient(135deg, #f5e6c8 0%, #c9a84c 40%, #e8d5ff 70%, #c9a84c 100%);
-    background-size: 200% 200%;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    animation: shimmer 6s ease-in-out infinite;
-    margin-bottom: 10px;
-  }
-  @keyframes shimmer {
-    0%, 100% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-  }
-
-  .tagline {
-    font-family: 'Playfair Display', serif;
-    font-style: italic;
-    font-size: 1.05rem;
-    color: rgba(184,196,212,0.7);
-    margin-bottom: 56px;
-    letter-spacing: 0.05em;
-  }
-
-  /* Input area */
-  .input-card {
-    width: 100%;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(201,168,76,0.25);
-    border-radius: 20px;
-    padding: 32px;
-    backdrop-filter: blur(12px);
-    box-shadow: 0 8px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06);
-    margin-bottom: 40px;
-  }
-
-  .prompt-prefix {
-    font-size: 0.82rem;
-    font-weight: 500;
-    color: var(--gold);
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    margin-bottom: 12px;
-    display: block;
-  }
-
-  .input-row {
-    display: flex;
-    gap: 12px;
-    align-items: stretch;
-  }
-
-  input[type="text"] {
-    flex: 1;
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 12px;
-    padding: 16px 20px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 1rem;
-    color: var(--paper);
-    outline: none;
-    transition: border-color 0.3s, box-shadow 0.3s, background 0.3s;
-    caret-color: var(--gold);
-  }
-  input[type="text"]::placeholder { color: rgba(184,196,212,0.35); }
-  input[type="text"]:focus {
-    border-color: rgba(201,168,76,0.5);
-    background: rgba(255,255,255,0.08);
-    box-shadow: 0 0 0 3px rgba(201,168,76,0.1);
-  }
-
-  .go-btn {
-    background: linear-gradient(135deg, #c9a84c, #a07830);
-    color: var(--ink);
-    border: none;
-    border-radius: 12px;
-    padding: 16px 32px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 1rem;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
-    white-space: nowrap;
-    box-shadow: 0 4px 20px rgba(201,168,76,0.35);
-    position: relative;
-    overflow: hidden;
-  }
-  .go-btn::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, rgba(255,255,255,0.2), transparent);
-    opacity: 0;
-    transition: opacity 0.2s;
-  }
-  .go-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(201,168,76,0.5); }
-  .go-btn:hover:not(:disabled)::after { opacity: 1; }
-  .go-btn:active:not(:disabled) { transform: translateY(0); }
-  .go-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-
-  /* Video / output area */
-  #output-area {
-    width: 100%;
-    display: none;
-  }
-
-  .video-wrapper {
-    width: 100%;
-    background: #000;
-    border-radius: 18px;
-    overflow: hidden;
-    border: 1px solid rgba(201,168,76,0.2);
-    box-shadow: 0 20px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04);
-    position: relative;
-    aspect-ratio: 16/9;
-  }
-
-  /* The "video" canvas */
-  #dream-canvas {
-    width: 100%;
-    height: 100%;
-    display: block;
-    background: #050510;
-  }
-
-  /* Video overlay controls bar */
-  .video-bar {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 14px 20px;
-    background: rgba(5,5,16,0.9);
-    border-top: 1px solid rgba(255,255,255,0.06);
-  }
-  .play-btn {
-    background: none;
-    border: none;
-    color: var(--gold);
-    cursor: pointer;
-    font-size: 1.2rem;
-    padding: 4px;
-    line-height: 1;
-    transition: transform 0.2s;
-  }
-  .play-btn:hover { transform: scale(1.15); }
-  .progress-track {
-    flex: 1;
-    height: 4px;
-    background: rgba(255,255,255,0.1);
-    border-radius: 2px;
-    cursor: pointer;
-    position: relative;
-  }
-  .progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #c9a84c, #e8d5ff);
-    border-radius: 2px;
-    width: 0%;
-    transition: width 0.1s linear;
-  }
-  .time-label {
-    font-size: 0.75rem;
-    color: rgba(184,196,212,0.6);
-    white-space: nowrap;
-    font-variant-numeric: tabular-nums;
-  }
-
-  /* Loading state */
-  .loading-overlay {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: #050510;
-    z-index: 10;
-  }
-  .loading-overlay.hidden { display: none; }
-
-  .orb-ring {
-    width: 70px; height: 70px;
-    border-radius: 50%;
-    border: 2px solid transparent;
-    border-top-color: var(--gold);
-    border-right-color: rgba(201,168,76,0.3);
-    animation: spin 1.2s linear infinite;
-    margin-bottom: 20px;
-    box-shadow: 0 0 20px rgba(201,168,76,0.3);
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .loading-text {
-    font-family: 'Playfair Display', serif;
-    font-style: italic;
-    color: rgba(184,196,212,0.6);
-    font-size: 1rem;
-    animation: pulse 2s ease-in-out infinite;
-  }
-  @keyframes pulse { 0%,100%{opacity:0.5} 50%{opacity:1} }
-
-  /* Transcript below */
-  #transcript-area {
-    margin-top: 28px;
-    display: none;
-  }
-  .transcript-label {
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: var(--gold);
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    margin-bottom: 14px;
-  }
-  .transcript-box {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.07);
-    border-radius: 14px;
-    padding: 24px;
-    font-size: 0.9rem;
-    line-height: 1.8;
-    color: rgba(184,196,212,0.75);
-    max-height: 260px;
-    overflow-y: auto;
-  }
-  .transcript-box::-webkit-scrollbar { width: 4px; }
-  .transcript-box::-webkit-scrollbar-track { background: transparent; }
-  .transcript-box::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.3); border-radius: 2px; }
-
-  /* Slide styles rendered on canvas */
-  #slide-title { display: none; }
+:root{--ink:#0d0d1a;--paper:#f5f0e8;--gold:#c9a84c;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--ink);color:var(--paper);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 50% at 20% 20%,rgba(123,94,167,.15) 0%,transparent 60%),radial-gradient(ellipse 100% 100% at 50% 50%,#0d0d1a 40%,#14082a 100%);z-index:0;pointer-events:none;}
+.stars{position:fixed;inset:0;pointer-events:none;z-index:0;}
+.star{position:absolute;border-radius:50%;background:white;animation:twinkle var(--d,3s) ease-in-out infinite;opacity:0;}
+@keyframes twinkle{0%,100%{opacity:0;transform:scale(.5)}50%{opacity:var(--o,.8);transform:scale(1)}}
+.container{position:relative;z-index:1;max-width:860px;margin:0 auto;padding:50px 24px 80px;display:flex;flex-direction:column;align-items:center;}
+.moon{width:72px;height:72px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#f5e6c8,#c9a84c 60%,#8a6a20);box-shadow:0 0 40px rgba(201,168,76,.4),0 0 80px rgba(201,168,76,.15);margin-bottom:24px;animation:moonFloat 6s ease-in-out infinite;}
+@keyframes moonFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+h1{font-family:'Playfair Display',serif;font-size:clamp(2.8rem,8vw,5.2rem);font-weight:900;line-height:1;text-align:center;background:linear-gradient(135deg,#f5e6c8 0%,#c9a84c 40%,#e8d5ff 70%,#c9a84c 100%);background-size:200% 200%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:shimmer 6s ease-in-out infinite;margin-bottom:8px;}
+@keyframes shimmer{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+.tagline{font-family:'Playfair Display',serif;font-style:italic;font-size:1rem;color:rgba(184,196,212,.6);margin-bottom:48px;letter-spacing:.05em;}
+.input-card{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(201,168,76,.25);border-radius:20px;padding:28px 32px;backdrop-filter:blur(12px);box-shadow:0 8px 40px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.06);margin-bottom:36px;}
+.prompt-prefix{font-size:.78rem;font-weight:500;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;margin-bottom:12px;display:block;}
+.input-row{display:flex;gap:12px;align-items:stretch;}
+input[type="text"]{flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:15px 18px;font-family:'DM Sans',sans-serif;font-size:1rem;color:var(--paper);outline:none;transition:border-color .3s,box-shadow .3s;caret-color:var(--gold);}
+input[type="text"]::placeholder{color:rgba(184,196,212,.35);}
+input[type="text"]:focus{border-color:rgba(201,168,76,.5);background:rgba(255,255,255,.08);box-shadow:0 0 0 3px rgba(201,168,76,.1);}
+.go-btn{background:linear-gradient(135deg,#c9a84c,#a07830);color:var(--ink);border:none;border-radius:12px;padding:15px 30px;font-family:'DM Sans',sans-serif;font-size:1rem;font-weight:600;letter-spacing:.05em;cursor:pointer;transition:transform .2s,box-shadow .2s,opacity .2s;box-shadow:0 4px 20px rgba(201,168,76,.35);}
+.go-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 30px rgba(201,168,76,.5);}
+.go-btn:disabled{opacity:.4;cursor:not-allowed;}
+.error-msg{color:#ff8a8a;font-size:.85rem;margin-top:12px;text-align:center;display:none;line-height:1.5;}
+#output-area{width:100%;display:none;}
+.video-wrapper{width:100%;background:#000;border-radius:18px;overflow:hidden;border:1px solid rgba(201,168,76,.2);box-shadow:0 20px 80px rgba(0,0,0,.7);position:relative;aspect-ratio:16/9;}
+#dream-canvas{width:100%;height:100%;display:block;background:#050510;}
+.loading-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#050510;z-index:10;}
+.loading-overlay.hidden{display:none;}
+.orb-ring{width:64px;height:64px;border-radius:50%;border:2px solid transparent;border-top-color:var(--gold);border-right-color:rgba(201,168,76,.3);animation:spin 1.2s linear infinite;margin-bottom:18px;box-shadow:0 0 20px rgba(201,168,76,.3);}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-family:'Playfair Display',serif;font-style:italic;color:rgba(184,196,212,.6);font-size:.95rem;animation:pulse 2s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}
+.video-bar{display:flex;align-items:center;gap:14px;padding:12px 18px;background:rgba(5,5,16,.95);border-top:1px solid rgba(255,255,255,.06);}
+.ctrl-btn{background:none;border:none;color:var(--gold);cursor:pointer;font-size:1.1rem;padding:4px;line-height:1;transition:transform .2s;}
+.ctrl-btn:hover{transform:scale(1.15);}
+.progress-track{flex:1;height:4px;background:rgba(255,255,255,.1);border-radius:2px;cursor:pointer;}
+.progress-fill{height:100%;background:linear-gradient(90deg,#c9a84c,#e8d5ff);border-radius:2px;width:0%;transition:width .1s linear;}
+.time-label{font-size:.72rem;color:rgba(184,196,212,.6);white-space:nowrap;font-variant-numeric:tabular-nums;}
+.vol-btn{background:none;border:none;cursor:pointer;font-size:.95rem;color:rgba(184,196,212,.5);transition:color .2s;padding:2px;}
+.vol-btn:hover{color:var(--gold);}
+#transcript-area{margin-top:24px;display:none;}
+.transcript-label{font-size:.75rem;font-weight:500;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;margin-bottom:12px;}
+.transcript-box{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:22px;font-size:.88rem;line-height:1.85;color:rgba(184,196,212,.7);max-height:240px;overflow-y:auto;}
+.transcript-box::-webkit-scrollbar{width:4px;}
+.transcript-box::-webkit-scrollbar-thumb{background:rgba(201,168,76,.3);border-radius:2px;}
 </style>
 </head>
 <body>
-
 <div class="stars" id="stars"></div>
-
 <div class="container">
   <div class="moon"></div>
   <h1>Learn in Dream</h1>
   <p class="tagline">where knowledge blooms while the world sleeps</p>
-
   <div class="input-card">
-    <span class="prompt-prefix">✦ Tonight's lesson</span>
+    <span class="prompt-prefix">&#10022; Tonight's lesson</span>
     <div class="input-row">
-      <input type="text" id="topic-input" placeholder="e.g. the lifecycle of stars, quantum entanglement…" />
-      <button class="go-btn" id="go-btn" onclick="generateVideo()">Go ✦</button>
+      <input type="text" id="topic-input" placeholder="e.g. the lifecycle of stars, quantum entanglement&hellip;" />
+      <button class="go-btn" id="go-btn" onclick="generateVideo()">Go &#10022;</button>
     </div>
+    <div class="error-msg" id="error-msg"></div>
   </div>
-
   <div id="output-area">
     <div class="video-wrapper">
       <canvas id="dream-canvas"></canvas>
       <div class="loading-overlay" id="loading-overlay">
         <div class="orb-ring"></div>
-        <div class="loading-text">Weaving your dream lesson…</div>
+        <div class="loading-text" id="loading-text">Weaving your dream lesson&hellip;</div>
       </div>
     </div>
     <div class="video-bar">
-      <button class="play-btn" id="play-btn" onclick="togglePlayback()">⏸</button>
+      <button class="ctrl-btn" id="play-btn" onclick="togglePlayback()">&#9208;</button>
+      <button class="ctrl-btn" onclick="restartVideo()" title="Restart">&#8634;</button>
       <div class="progress-track" onclick="seekVideo(event)">
         <div class="progress-fill" id="progress-fill"></div>
       </div>
       <span class="time-label" id="time-label">0:00 / 0:00</span>
+      <button class="vol-btn" id="vol-btn" onclick="toggleMute()" title="Toggle narration">&#128266;</button>
     </div>
-
     <div id="transcript-area">
-      <div class="transcript-label">✦ Full Script</div>
+      <div class="transcript-label">&#10022; Full Script</div>
       <div class="transcript-box" id="transcript-box"></div>
     </div>
   </div>
 </div>
-
 <script>
-// --- Starfield ---
 (function(){
-  const s = document.getElementById('stars');
+  const s=document.getElementById('stars');
   for(let i=0;i<140;i++){
-    const el = document.createElement('div');
-    el.className='star';
-    const size = Math.random()*2.5+0.5;
-    el.style.cssText=`width:${size}px;height:${size}px;top:${Math.random()*100}%;left:${Math.random()*100}%;--d:${2+Math.random()*5}s;--o:${0.3+Math.random()*0.7};animation-delay:${Math.random()*6}s`;
+    const el=document.createElement('div');el.className='star';
+    const sz=Math.random()*2.5+.5;
+    el.style.cssText='width:'+sz+'px;height:'+sz+'px;top:'+Math.random()*100+'%;left:'+Math.random()*100+'%;--d:'+(2+Math.random()*5)+'s;--o:'+(0.3+Math.random()*0.7)+';animation-delay:'+Math.random()*6+'s';
     s.appendChild(el);
   }
 })();
 
-// --- State ---
-let slides = [];
-let currentSlide = 0;
-let slideStartTime = 0;
-let totalDuration = 0;
-let isPlaying = false;
-let animFrame = null;
-let videoStarted = false;
-let elapsed = 0;
-let lastTimestamp = null;
-let fullScript = '';
-
-const canvas = document.getElementById('dream-canvas');
-const ctx = canvas.getContext('2d');
-
-function resizeCanvas() {
-  const wrapper = canvas.parentElement;
-  canvas.width = wrapper.clientWidth;
-  canvas.height = wrapper.clientWidth * 9/16;
-}
-window.addEventListener('resize', () => { resizeCanvas(); if(videoStarted) renderCurrentSlide(); });
+const canvas=document.getElementById('dream-canvas');
+const ctx=canvas.getContext('2d');
+function resizeCanvas(){const w=canvas.parentElement.clientWidth;canvas.width=w;canvas.height=Math.round(w*9/16);}
+window.addEventListener('resize',resizeCanvas);
 resizeCanvas();
 
-// --- API Call ---
-async function generateVideo() {
-  const topic = document.getElementById('topic-input').value.trim();
-  if(!topic) {
-    document.getElementById('topic-input').focus();
-    return;
-  }
+let slides=[],currentSlide=0,slideStartTime=0,totalDuration=0;
+let isPlaying=false,animFrame=null,videoStarted=false;
+let elapsed=0,lastTimestamp=null,fullScript='';
+let isMuted=false,audioCtx=null,musicNodes=[];
 
-  const btn = document.getElementById('go-btn');
-  btn.disabled = true;
+const OR_KEY='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';
+const OR_MODELS=[
+  'meta-llama/llama-4-maverick:free',
+  'meta-llama/llama-4-scout:free',
+  'deepseek/deepseek-chat-v3-0324:free',
+  'google/gemma-3-27b-it:free',
+  'meta-llama/llama-3.3-70b-instruct:free'
+];
 
-  document.getElementById('output-area').style.display = 'block';
-  document.getElementById('transcript-area').style.display = 'none';
-  document.getElementById('loading-overlay').classList.remove('hidden');
-  document.getElementById('output-area').scrollIntoView({behavior:'smooth', block:'start'});
-
-  const prompt = `Create a video to teach me about: ${topic}. And start with a big title of 'Learn in Dream', it should be 1-2 min long.
-
-Your response must be ONLY valid JSON, no markdown, no explanation. Return an object like:
-{
-  "slides": [
-    {
-      "type": "title",
-      "headline": "Learn in Dream",
-      "subtitle": "Topic subtitle here",
-      "duration": 4
+async function callAnthropic(prompt){
+  const res=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true'
     },
-    {
-      "type": "content",
-      "headline": "Section Title",
-      "bullets": ["Point one with detail", "Point two with detail", "Point three with detail"],
-      "visual": "A short poetic visual description for the background (e.g. 'glowing nebula with drifting particles')",
-      "duration": 10
-    }
-  ],
-  "fullScript": "The complete narration script of the entire video as one flowing paragraph, 200-350 words."
+    body:JSON.stringify({
+      model:'claude-haiku-4-5-20251001',
+      max_tokens:2500,
+      messages:[{role:'user',content:prompt}]
+    })
+  });
+  const d=await res.json();
+  if(!res.ok||d.error) throw new Error(d&&d.error&&d.error.message?d.error.message:'HTTP '+res.status);
+  const text=d.content&&d.content[0]&&d.content[0].text?d.content[0].text:'';
+  if(!text) throw new Error('Empty response');
+  console.log('Used Anthropic claude-haiku');
+  return text;
 }
 
-Rules:
-- First slide must be type "title" with headline exactly "Learn in Dream"
-- Include 8-12 total slides covering the topic thoroughly
-- content slides have 2-4 bullets each, each bullet max 12 words
-- Total duration of all slides should sum to 75-110 seconds
-- fullScript should be engaging, educational, and poetic in tone
-- Vary slide types: use "title", "content", "quote", "fact"
-- For type "quote": fields are headline, quote, attribution, duration
-- For type "fact": fields are headline, fact (1 big dramatic statement), context, duration`;
+async function callOpenRouter(prompt){
+  let lastErr=null;
+  for(const model of OR_MODELS){
+    try{
+      const res=await fetch('https://openrouter.ai/api/v1/chat/completions',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+OR_KEY,'HTTP-Referer':location.href,'X-Title':'Learn in Dream'},
+        body:JSON.stringify({model:model,messages:[{role:'user',content:prompt}],temperature:0.85,max_tokens:2500})
+      });
+      const d=await res.json();
+      if(!res.ok||d.error) throw new Error(d&&d.error&&d.error.message?d.error.message:'HTTP '+res.status);
+      const text=d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content?d.choices[0].message.content:'';
+      if(text){console.log('Used OpenRouter model:',model);return text;}
+      throw new Error('Empty response');
+    }catch(e){console.warn('Model '+model+' failed:',e.message);lastErr=e;}
+  }
+  throw lastErr||new Error('All OpenRouter models failed');
+}
 
-  try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 2000,
-        messages: [{ role: "user", content: prompt }]
-      })
-    });
+async function callAI(prompt){
+  // Try Anthropic first (best quality, works on HTTPS)
+  try{return await callAnthropic(prompt);}
+  catch(e){console.warn('Anthropic failed:',e.message,'→ trying OpenRouter...');}
+  // Fallback to OpenRouter
+  return await callOpenRouter(prompt);
+}
 
-    const data = await response.json();
-    const raw = data.content.map(i => i.text || '').join('');
-    const clean = raw.replace(/```json|```/g,'').trim();
-    const parsed = JSON.parse(clean);
+async function generateVideo(){
+  const topic=document.getElementById('topic-input').value.trim();
+  const errEl=document.getElementById('error-msg');
+  errEl.style.display='none';
+  if(!topic){showError('Please enter a topic to learn about.');return;}
+  document.getElementById('go-btn').disabled=true;
+  stopSpeech();stopMusic();
+  document.getElementById('output-area').style.display='block';
+  document.getElementById('transcript-area').style.display='none';
+  document.getElementById('loading-overlay').classList.remove('hidden');
+  document.getElementById('loading-text').textContent='Weaving your dream lesson...';
+  document.getElementById('output-area').scrollIntoView({behavior:'smooth',block:'start'});
 
-    slides = parsed.slides;
-    fullScript = parsed.fullScript || '';
-    totalDuration = slides.reduce((s,sl) => s + (sl.duration||8), 0);
+  const prompt='Create a video to teach me about: '+topic+'. And start with a big title of \'Learn in Dream\', it should be 1-2 min long.\n\nReturn ONLY a valid JSON object. No markdown, no backticks, no extra text. Just raw JSON:\n{"slides":[{"type":"title","headline":"Learn in Dream","subtitle":"subtitle here","duration":5},{"type":"content","headline":"Section Title","bullets":["Point one","Point two","Point three"],"duration":12}],"fullScript":"full narration here"}\n\nRules:\n- First slide MUST be type "title" with headline exactly "Learn in Dream"\n- 9-12 total slides\n- Types: title, content, quote, fact\n- content: headline + 2-4 bullets max 12 words each\n- quote: headline, quote max 20 words, attribution\n- fact: headline, fact max 15 words, context max 20 words\n- Each slide 7-13 sec, total 80-110 seconds\n- fullScript: 240-320 words poetic narration';
 
-    // show transcript
-    if(fullScript) {
-      document.getElementById('transcript-box').textContent = fullScript;
-      document.getElementById('transcript-area').style.display = 'block';
-    }
-
-    // start playback
+  try{
+    document.getElementById('loading-text').textContent='Generating lesson...';
+    const raw=await callAI(prompt);
+    const match=raw.match(/\{[\s\S]*\}/);
+    if(!match) throw new Error('No JSON found in response');
+    const parsed=JSON.parse(match[0]);
+    slides=parsed.slides||[];
+    fullScript=parsed.fullScript||'';
+    if(!slides.length) throw new Error('No slides returned');
+    totalDuration=slides.reduce(function(s,sl){return s+(sl.duration||9);},0);
+    if(fullScript){document.getElementById('transcript-box').textContent=fullScript;document.getElementById('transcript-area').style.display='block';}
     document.getElementById('loading-overlay').classList.add('hidden');
-    videoStarted = true;
-    elapsed = 0;
-    lastTimestamp = null;
-    isPlaying = true;
-    document.getElementById('play-btn').textContent = '⏸';
-    playLoop();
-
-  } catch(e) {
-    document.getElementById('loading-overlay').querySelector('.loading-text').textContent = 'Something went wrong. Please try again.';
+    videoStarted=true;elapsed=0;lastTimestamp=null;isPlaying=true;
+    document.getElementById('play-btn').innerHTML='&#9208;';
+    startMusic();startNarration(fullScript);
+    requestAnimationFrame(playLoop);
+  }catch(e){
+    showError('Error: '+e.message);
+    document.getElementById('loading-text').textContent='Something went wrong. Please try again.';
     console.error(e);
   }
-
-  btn.disabled = false;
+  document.getElementById('go-btn').disabled=false;
 }
 
-// --- Playback ---
-function playLoop(ts) {
+function showError(msg){const el=document.getElementById('error-msg');el.textContent=msg;el.style.display='block';}
+
+function playLoop(ts){
   if(!isPlaying) return;
-  if(lastTimestamp !== null) elapsed += (ts - lastTimestamp) / 1000;
-  lastTimestamp = ts;
-
-  // find current slide
-  let acc = 0;
-  let si = 0;
-  for(let i=0;i<slides.length;i++){
-    if(elapsed < acc + slides[i].duration){ si=i; slideStartTime=acc; break; }
-    acc += slides[i].duration;
-    si = slides.length-1;
-    slideStartTime = acc - slides[slides.length-1].duration;
-  }
-  if(elapsed >= totalDuration) {
-    elapsed = totalDuration;
-    isPlaying = false;
-    document.getElementById('play-btn').textContent = '▶';
-  }
-  currentSlide = si;
-
-  const localT = elapsed - slideStartTime;
-  const slideDur = slides[si].duration;
-  renderSlide(slides[si], localT, slideDur);
-
-  // progress
-  const pct = Math.min(100, (elapsed / totalDuration) * 100);
-  document.getElementById('progress-fill').style.width = pct + '%';
-  document.getElementById('time-label').textContent = fmtTime(elapsed) + ' / ' + fmtTime(totalDuration);
-
-  animFrame = requestAnimationFrame(playLoop);
+  if(lastTimestamp!==null) elapsed+=(ts-lastTimestamp)/1000;
+  lastTimestamp=ts;
+  if(elapsed>=totalDuration){elapsed=totalDuration;isPlaying=false;document.getElementById('play-btn').innerHTML='&#9654;';stopSpeech();updateProgress();return;}
+  let acc=0,si=0,st=0;
+  for(let i=0;i<slides.length;i++){if(elapsed<acc+slides[i].duration){si=i;st=acc;break;}acc+=slides[i].duration;si=slides.length-1;st=totalDuration-slides[slides.length-1].duration;}
+  currentSlide=si;slideStartTime=st;
+  renderSlide(slides[si],elapsed-st,slides[si].duration);
+  updateProgress();
+  animFrame=requestAnimationFrame(playLoop);
 }
 
-function togglePlayback() {
+function updateProgress(){
+  const pct=Math.min(100,(elapsed/totalDuration)*100);
+  document.getElementById('progress-fill').style.width=pct+'%';
+  document.getElementById('time-label').textContent=fmt(elapsed)+' / '+fmt(totalDuration);
+}
+
+function togglePlayback(){
   if(!videoStarted) return;
-  isPlaying = !isPlaying;
-  document.getElementById('play-btn').textContent = isPlaying ? '⏸' : '▶';
-  if(isPlaying) {
-    if(elapsed >= totalDuration) elapsed = 0;
-    lastTimestamp = null;
-    animFrame = requestAnimationFrame(playLoop);
-  }
+  isPlaying=!isPlaying;
+  document.getElementById('play-btn').innerHTML=isPlaying?'&#9208;':'&#9654;';
+  if(isPlaying){if(elapsed>=totalDuration){elapsed=0;startNarration(fullScript);}lastTimestamp=null;requestAnimationFrame(playLoop);}
+  else{cancelAnimationFrame(animFrame);lastTimestamp=null;}
 }
 
-function seekVideo(e) {
+function restartVideo(){
   if(!videoStarted) return;
-  const rect = e.currentTarget.getBoundingClientRect();
-  const pct = (e.clientX - rect.left) / rect.width;
-  elapsed = pct * totalDuration;
-  lastTimestamp = null;
-  if(!isPlaying) renderCurrentSlide();
+  elapsed=0;lastTimestamp=null;isPlaying=true;
+  document.getElementById('play-btn').innerHTML='&#9208;';
+  stopSpeech();startNarration(fullScript);
+  requestAnimationFrame(playLoop);
 }
 
-function renderCurrentSlide() {
-  if(!slides.length) return;
-  const localT = elapsed - slideStartTime;
-  renderSlide(slides[currentSlide], localT, slides[currentSlide].duration);
+function seekVideo(e){
+  if(!videoStarted) return;
+  const r=e.currentTarget.getBoundingClientRect();
+  elapsed=Math.max(0,Math.min(totalDuration,((e.clientX-r.left)/r.width)*totalDuration));
+  lastTimestamp=null;
 }
 
-function fmtTime(s) {
-  const m = Math.floor(s/60);
-  const ss = Math.floor(s%60).toString().padStart(2,'0');
-  return `${m}:${ss}`;
-}
+function fmt(s){const m=Math.floor(s/60),ss=Math.floor(s%60).toString().padStart(2,'0');return m+':'+ss;}
 
-// --- Renderer ---
-const PALETTES = [
+function startNarration(text){
+  if(!text||isMuted||!window.speechSynthesis) return;
+  stopSpeech();
+  const u=new SpeechSynthesisUtterance(text);
+  u.rate=0.9;u.pitch=1.0;u.volume=0.85;
+  const voices=window.speechSynthesis.getVoices();
+  const v=voices.find(function(v){return v.name.toLowerCase().includes('google')&&v.lang.startsWith('en');})||voices.find(function(v){return v.lang.startsWith('en');});
+  if(v) u.voice=v;
+  window.speechSynthesis.speak(u);
+}
+function stopSpeech(){if(window.speechSynthesis)window.speechSynthesis.cancel();}
+function toggleMute(){
+  isMuted=!isMuted;
+  document.getElementById('vol-btn').innerHTML=isMuted?'&#128264;':'&#128266;';
+  if(isMuted) stopSpeech();
+  else if(videoStarted&&isPlaying) startNarration(fullScript);
+}
+if(window.speechSynthesis) window.speechSynthesis.onvoiceschanged=function(){};
+
+function startMusic(){
+  try{
+    audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+    const master=audioCtx.createGain();
+    master.gain.setValueAtTime(0,audioCtx.currentTime);
+    master.gain.linearRampToValueAtTime(0.05,audioCtx.currentTime+4);
+    master.connect(audioCtx.destination);
+    [65.4,98,130.8,164.8,196,261.6,329.6].forEach(function(f,i){
+      const osc=audioCtx.createOscillator(),g=audioCtx.createGain(),lfo=audioCtx.createOscillator(),lg=audioCtx.createGain();
+      osc.type=i%2===0?'sine':'triangle';osc.frequency.value=f;
+      lfo.frequency.value=0.1+i*0.04;lg.gain.value=0.3;
+      lfo.connect(lg);lg.connect(osc.frequency);
+      g.gain.value=0.1/Math.sqrt(i+1);
+      osc.connect(g);g.connect(master);
+      lfo.start(audioCtx.currentTime+i*0.2);osc.start(audioCtx.currentTime+i*0.2);
+      musicNodes.push(osc,lfo);
+    });
+  }catch(e){console.log('Web Audio unavailable');}
+}
+function stopMusic(){musicNodes.forEach(function(n){try{n.stop();}catch(e){}});musicNodes=[];if(audioCtx){try{audioCtx.close();}catch(e){}audioCtx=null;}}
+
+const PAL=[
   ['#0d0d2e','#1a0a3a','#7b5ea7','#c9a84c'],
   ['#050f1a','#0a2030','#4a8fa8','#c9a84c'],
   ['#0d1a0d','#0a2a10','#4a9a6a','#e8c44c'],
   ['#1a0a0a','#2a0a1a','#a84c7b','#c9a84c'],
   ['#0a0a1a','#050a30','#4c5ea8','#e8d5ff'],
+  ['#1a1000','#2a1800','#c87820','#f0e0a0']
 ];
-let paletteIdx = 0;
 
-function getPalette(si) {
-  return PALETTES[si % PALETTES.length];
-}
-
-function renderSlide(slide, localT, dur) {
+function renderSlide(slide,localT,dur){
   resizeCanvas();
-  const W = canvas.width, H = canvas.height;
-  const pal = getPalette(currentSlide);
-
-  // fadeIn / fadeOut
-  const fadeD = Math.min(0.6, dur*0.15);
-  let alpha = 1;
-  if(localT < fadeD) alpha = localT/fadeD;
-  else if(localT > dur-fadeD) alpha = (dur-localT)/fadeD;
-  alpha = Math.max(0, Math.min(1, alpha));
-
-  // Background
-  const grad = ctx.createRadialGradient(W*0.5, H*0.4, 0, W*0.5, H*0.4, W*0.8);
-  grad.addColorStop(0, pal[1]);
-  grad.addColorStop(1, pal[0]);
-  ctx.fillStyle = grad;
-  ctx.fillRect(0,0,W,H);
-
-  // Animated orb
-  const orbX = W * (0.7 + 0.1*Math.sin(localT*0.5));
-  const orbY = H * (0.3 + 0.08*Math.cos(localT*0.4));
-  const orbR = W * 0.22;
-  const og = ctx.createRadialGradient(orbX, orbY, 0, orbX, orbY, orbR);
-  og.addColorStop(0, pal[2]+'33');
-  og.addColorStop(0.5, pal[2]+'11');
-  og.addColorStop(1, 'transparent');
-  ctx.fillStyle = og;
-  ctx.beginPath(); ctx.arc(orbX, orbY, orbR, 0, Math.PI*2); ctx.fill();
-
-  // Floating particles
+  const W=canvas.width,H=canvas.height,pal=PAL[currentSlide%PAL.length];
+  const fd=Math.min(0.65,dur*.12);
+  let alpha=1;
+  if(localT<fd) alpha=localT/fd;
+  else if(localT>dur-fd) alpha=(dur-localT)/fd;
+  alpha=Math.max(0,Math.min(1,alpha));
+  const bg=ctx.createRadialGradient(W*.5,H*.4,0,W*.5,H*.4,W*.85);
+  bg.addColorStop(0,pal[1]);bg.addColorStop(1,pal[0]);
+  ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+  [[.68,.32,.25,2],[.25,.65,.18,3]].forEach(function(o,oi){
+    const ox=W*(o[0]+.07*Math.sin(localT*(.4+oi*.1)));
+    const oy=H*(o[1]+.06*Math.cos(localT*(.3+oi*.1)));
+    const og=ctx.createRadialGradient(ox,oy,0,ox,oy,W*o[2]);
+    og.addColorStop(0,pal[o[3]]+(oi===0?'44':'28'));og.addColorStop(1,'transparent');
+    ctx.fillStyle=og;ctx.beginPath();ctx.arc(ox,oy,W*o[2],0,Math.PI*2);ctx.fill();
+  });
   ctx.save();
-  ctx.globalAlpha = 0.5;
-  for(let i=0;i<18;i++){
-    const px = ((i*137.5 + localT*8*(i%3===0?1:-0.5)) % W + W) % W;
-    const py = ((i*83.7 + localT*5*(i%2===0?1:-1)) % H + H) % H;
-    const pr = (Math.sin(i*1.3)*0.5+0.5)*2+0.5;
-    ctx.fillStyle = i%3===0 ? pal[3] : '#ffffff';
-    ctx.globalAlpha = (Math.sin(localT+i)*0.5+0.5)*0.4+0.1;
-    ctx.beginPath(); ctx.arc(px,py,pr,0,Math.PI*2); ctx.fill();
+  for(let i=0;i<22;i++){
+    const px=((i*137.5+localT*9*(i%3?-.6:1))%W+W)%W;
+    const py=((i*83.7+localT*6*(i%2?-1:1))%H+H)%H;
+    const pr=(Math.sin(i*1.3)*.5+.5)*2+.5;
+    ctx.globalAlpha=(Math.sin(localT+i)*.5+.5)*.3+.05;
+    ctx.fillStyle=i%3?'#ffffff':pal[3];
+    ctx.beginPath();ctx.arc(px,py,pr,0,Math.PI*2);ctx.fill();
   }
   ctx.restore();
-
-  // Global fade
-  ctx.globalAlpha = alpha;
-
-  if(slide.type === 'title') renderTitleSlide(slide, W, H, pal, localT);
-  else if(slide.type === 'quote') renderQuoteSlide(slide, W, H, pal, localT);
-  else if(slide.type === 'fact') renderFactSlide(slide, W, H, pal, localT);
-  else renderContentSlide(slide, W, H, pal, localT);
-
-  ctx.globalAlpha = 1;
+  ctx.globalAlpha=alpha;
+  if(slide.type==='title') drawTitle(slide,W,H,pal,localT);
+  else if(slide.type==='quote') drawQuote(slide,W,H,pal,localT);
+  else if(slide.type==='fact') drawFact(slide,W,H,pal,localT);
+  else drawContent(slide,W,H,pal,localT);
+  ctx.globalAlpha=1;
 }
 
-function wrapText(text, x, y, maxW, lineH) {
-  const words = text.split(' ');
-  let line = '';
-  let lines = [];
-  for(let w of words){
-    const test = line ? line+' '+w : w;
-    if(ctx.measureText(test).width > maxW && line){
-      lines.push({text:line, x, y});
-      y += lineH;
-      line = w;
-    } else line = test;
+function wrap(text,maxW){
+  if(!text) return [''];
+  const words=String(text).split(' ');let line='',lines=[];
+  for(let i=0;i<words.length;i++){
+    const t=line?line+' '+words[i]:words[i];
+    if(ctx.measureText(t).width>maxW&&line){lines.push(line);line=words[i];}else line=t;
   }
-  if(line) lines.push({text:line, x, y});
-  return lines;
+  if(line) lines.push(line);return lines;
 }
 
-function drawWrapped(text, x, y, maxW, lineH) {
-  const lines = wrapText(text, x, y, maxW, lineH);
-  for(const l of lines) ctx.fillText(l.text, l.x, l.y);
-  return lines.length;
-}
-
-function renderTitleSlide(slide, W, H, pal, t) {
-  const cx = W/2;
-  // Glow circle
-  const gc = ctx.createRadialGradient(cx, H*0.45, 0, cx, H*0.45, H*0.35);
-  gc.addColorStop(0, pal[3]+'22');
-  gc.addColorStop(1,'transparent');
-  ctx.fillStyle=gc; ctx.fillRect(0,0,W,H);
-
-  // Main title
-  const fs = Math.min(W*0.09, 72);
-  ctx.font = `900 ${fs}px 'Playfair Display', serif`;
-  ctx.textAlign = 'center';
-  ctx.shadowColor = pal[3];
-  ctx.shadowBlur = 30;
-  ctx.fillStyle = '#f5e6c8';
-  ctx.fillText(slide.headline || 'Learn in Dream', cx, H*0.42);
-  ctx.shadowBlur = 0;
-
-  if(slide.subtitle){
-    ctx.font = `italic ${Math.min(W*0.035,26)}px 'Playfair Display', serif`;
-    ctx.fillStyle = 'rgba(184,196,212,0.8)';
-    drawWrapped(slide.subtitle, cx, H*0.56, W*0.7, Math.min(W*0.05,36));
+function drawTitle(s,W,H,pal,t){
+  const cx=W/2;ctx.textAlign='center';ctx.textBaseline='middle';
+  const fs=Math.min(W*.082,66);
+  ctx.font='900 '+fs+'px \'Playfair Display\',serif';
+  ctx.shadowColor=pal[3];ctx.shadowBlur=40;ctx.fillStyle='#f5e6c8';
+  ctx.fillText(s.headline||'Learn in Dream',cx,H*.38);ctx.shadowBlur=0;
+  if(s.subtitle){
+    ctx.font='italic '+Math.min(W*.033,25)+'px \'Playfair Display\',serif';
+    ctx.fillStyle='rgba(184,196,212,.8)';
+    const lines=wrap(s.subtitle,W*.65);let y=H*.54;
+    lines.forEach(function(l){ctx.fillText(l,cx,y);y+=Math.min(W*.045,32);});
   }
-
-  // Decorative line
-  const lw = W*0.12;
-  const ly = H*0.65;
-  ctx.strokeStyle = pal[3];
-  ctx.lineWidth = 1;
-  ctx.globalAlpha *= 0.5;
-  ctx.beginPath(); ctx.moveTo(cx-lw, ly); ctx.lineTo(cx+lw, ly); ctx.stroke();
-  ctx.globalAlpha = Math.min(ctx.globalAlpha*2, 1);
-}
-
-function renderContentSlide(slide, W, H, pal, t) {
-  const pad = W*0.08;
-  // Headline
-  const hfs = Math.min(W*0.055, 42);
-  ctx.font = `700 ${hfs}px 'Playfair Display', serif`;
-  ctx.textAlign = 'left';
-  ctx.fillStyle = pal[3];
-  ctx.shadowColor = pal[3]; ctx.shadowBlur = 15;
-  const hLines = wrapText(slide.headline||'', pad, H*0.2, W*0.84, hfs*1.3);
-  for(const l of hLines) ctx.fillText(l.text, l.x, l.y);
-  ctx.shadowBlur = 0;
-
-  // Underline
-  const lastHL = hLines[hLines.length-1];
-  const ulY = (lastHL ? lastHL.y : H*0.2) + hfs*0.3;
-  ctx.strokeStyle = pal[3];
-  ctx.lineWidth = 2;
-  ctx.globalAlpha *= 0.4;
-  ctx.beginPath(); ctx.moveTo(pad, ulY); ctx.lineTo(pad+W*0.12, ulY); ctx.stroke();
-  ctx.globalAlpha = Math.min(ctx.globalAlpha*2.5, 1);
-
-  // Bullets
-  const bullets = slide.bullets || [];
-  const bfs = Math.min(W*0.035, 24);
-  ctx.font = `400 ${bfs}px 'DM Sans', sans-serif`;
-  let by = ulY + H*0.1;
-  const lineH = bfs*1.8;
-  bullets.forEach((b, i) => {
-    // stagger reveal
-    const revealT = i * (slide.duration / (bullets.length+1));
-    if(t < revealT) return;
-    const bAlpha = Math.min(1, (t-revealT)/0.5);
-    ctx.save();
-    ctx.globalAlpha *= bAlpha;
-    // Dot
-    ctx.fillStyle = pal[3];
-    ctx.beginPath(); ctx.arc(pad+6, by-bfs*0.2, 3, 0, Math.PI*2); ctx.fill();
-    // Text
-    ctx.fillStyle = 'rgba(230,225,215,0.9)';
-    const n = drawWrapped(b, pad+22, by, W*0.82, lineH);
-    by += lineH * n + bfs*0.3;
-    ctx.restore();
+  [-.18,-.09,0,.09,.18].forEach(function(o,i){
+    const p=Math.min(1,(t-i*.18)/.5);if(p<=0) return;
+    ctx.save();ctx.globalAlpha*=p*.65;ctx.fillStyle=pal[3];
+    ctx.beginPath();ctx.arc(cx+o*W,H*.72,2.5,0,Math.PI*2);ctx.fill();ctx.restore();
   });
 }
 
-function renderQuoteSlide(slide, W, H, pal, t) {
-  const cx = W/2;
-  // Big quote mark
-  ctx.font = `900 ${W*0.15}px 'Playfair Display', serif`;
-  ctx.textAlign = 'center';
-  ctx.fillStyle = pal[2]+'44';
-  ctx.fillText('"', cx - W*0.1, H*0.35);
-
-  const qfs = Math.min(W*0.04, 30);
-  ctx.font = `italic ${qfs}px 'Playfair Display', serif`;
-  ctx.fillStyle = '#f0e8d8';
-  ctx.shadowColor = pal[3]; ctx.shadowBlur = 10;
-  const qLines = wrapText(slide.quote||'', cx, H*0.4, W*0.72, qfs*1.6);
-  const totalH = (qLines.length-1)*qfs*1.6;
-  let qy = H*0.5 - totalH/2;
-  qLines.forEach(l => { ctx.fillText(l.text, cx, qy); qy += qfs*1.6; });
-  ctx.shadowBlur = 0;
-
-  if(slide.attribution){
-    ctx.font = `500 ${Math.min(W*0.028,20)}px 'DM Sans', sans-serif`;
-    ctx.fillStyle = pal[3];
-    ctx.fillText('— '+slide.attribution, cx, qy + qfs*0.8);
-  }
-  if(slide.headline){
-    ctx.font = `700 ${Math.min(W*0.032,22)}px 'Playfair Display', serif`;
-    ctx.fillStyle = 'rgba(184,196,212,0.5)';
-    ctx.fillText(slide.headline, cx, H*0.22);
-  }
-}
-
-function renderFactSlide(slide, W, H, pal, t) {
-  const cx = W/2;
-  if(slide.headline){
-    ctx.font = `500 ${Math.min(W*0.032,22)}px 'DM Sans', sans-serif`;
-    ctx.textAlign='center';
-    ctx.fillStyle = pal[3]+'aa';
-    ctx.fillText(slide.headline.toUpperCase(), cx, H*0.22);
-  }
-  const ffs = Math.min(W*0.058, 44);
-  ctx.font = `900 ${ffs}px 'Playfair Display', serif`;
-  ctx.textAlign='center';
-  ctx.fillStyle='#f5e6c8';
-  ctx.shadowColor=pal[2]; ctx.shadowBlur=25;
-  const fLines = wrapText(slide.fact||'', cx, H*0.45, W*0.75, ffs*1.3);
-  const totalH2 = (fLines.length-1)*ffs*1.3;
-  let fy = H*0.5 - totalH2/2;
-  fLines.forEach(l=>{ ctx.fillText(l.text,cx,fy); fy+=ffs*1.3; });
+function drawContent(s,W,H,pal,t){
+  const pad=W*.08;ctx.textAlign='left';ctx.textBaseline='top';
+  const hfs=Math.min(W*.05,38);
+  ctx.font='700 '+hfs+'px \'Playfair Display\',serif';
+  ctx.shadowColor=pal[3];ctx.shadowBlur=10;ctx.fillStyle=pal[3];
+  const hlines=wrap(s.headline||'',W*.82);let hy=H*.1;
+  hlines.forEach(function(l){ctx.fillText(l,pad,hy);hy+=hfs*1.3;});
   ctx.shadowBlur=0;
+  ctx.strokeStyle=pal[3];ctx.lineWidth=1.5;ctx.globalAlpha*=.4;
+  ctx.beginPath();ctx.moveTo(pad,hy+4);ctx.lineTo(pad+W*.09,hy+4);ctx.stroke();
+  ctx.globalAlpha=Math.min(ctx.globalAlpha/.4,1);
+  const bullets=s.bullets||[];
+  const bfs=Math.min(W*.032,22);
+  ctx.font='400 '+bfs+'px \'DM Sans\',sans-serif';
+  const lh=bfs*1.9,gap=(s.duration*.68)/(bullets.length||1);let by=hy+H*.09;
+  bullets.forEach(function(b,i){
+    const rt=i*gap;if(t<rt) return;
+    const ba=Math.min(1,(t-rt)/.45);
+    ctx.save();ctx.globalAlpha*=ba;ctx.fillStyle=pal[3];
+    ctx.beginPath();ctx.arc(pad+5,by+bfs*.5,3,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(230,225,215,.92)';
+    const bl=wrap(String(b),W*.79);
+    bl.forEach(function(l){ctx.fillText(l,pad+20,by);by+=lh;});
+    by+=bfs*.25;ctx.restore();
+  });
+}
 
-  if(slide.context){
-    ctx.font=`italic ${Math.min(W*0.028,20)}px 'Playfair Display', serif`;
-    ctx.fillStyle='rgba(184,196,212,0.6)';
-    drawWrapped(slide.context, cx, fy+H*0.05, W*0.65, Math.min(W*0.04,28));
+function drawQuote(s,W,H,pal,t){
+  const cx=W/2;ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.font='900 '+W*.13+'px \'Playfair Display\',serif';
+  ctx.fillStyle=pal[2]+'50';ctx.fillText('"',cx-W*.07,H*.28);
+  const qfs=Math.min(W*.037,27);
+  ctx.font='italic '+qfs+'px \'Playfair Display\',serif';
+  ctx.fillStyle='#f0e8d8';ctx.shadowColor=pal[3];ctx.shadowBlur=8;
+  const qlines=wrap(s.quote||'',W*.68);let qy=H*.44-(qlines.length*qfs*1.6)/2;
+  qlines.forEach(function(l){ctx.fillText(l,cx,qy);qy+=qfs*1.6;});ctx.shadowBlur=0;
+  if(s.attribution){ctx.font='500 '+Math.min(W*.025,18)+'px \'DM Sans\',sans-serif';ctx.fillStyle=pal[3];ctx.fillText('- '+s.attribution,cx,qy+qfs);}
+  if(s.headline){ctx.font='600 '+Math.min(W*.028,20)+'px \'DM Sans\',sans-serif';ctx.fillStyle='rgba(184,196,212,.4)';ctx.fillText(s.headline.toUpperCase(),cx,H*.17);}
+}
+
+function drawFact(s,W,H,pal,t){
+  const cx=W/2;ctx.textAlign='center';ctx.textBaseline='middle';
+  if(s.headline){ctx.font='500 '+Math.min(W*.027,19)+'px \'DM Sans\',sans-serif';ctx.fillStyle=pal[3]+'99';ctx.fillText(s.headline.toUpperCase(),cx,H*.18);}
+  const ffs=Math.min(W*.053,40);
+  ctx.font='900 '+ffs+'px \'Playfair Display\',serif';ctx.fillStyle='#f5e6c8';ctx.shadowColor=pal[2];ctx.shadowBlur=30;
+  const flines=wrap(s.fact||'',W*.7);let fy=H*.44-(flines.length*ffs*1.3)/2;
+  flines.forEach(function(l){ctx.fillText(l,cx,fy);fy+=ffs*1.3;});ctx.shadowBlur=0;
+  if(s.context){
+    ctx.font='italic '+Math.min(W*.026,18)+'px \'Playfair Display\',serif';ctx.fillStyle='rgba(184,196,212,.55)';
+    const cl=wrap(s.context,W*.6);cl.forEach(function(l){ctx.fillText(l,cx,fy+18);fy+=Math.min(W*.036,26);});
   }
 }
 
-// Enter key
-document.getElementById('topic-input').addEventListener('keydown', e => {
-  if(e.key==='Enter') generateVideo();
-});
+document.getElementById('topic-input').addEventListener('keydown',function(e){if(e.key==='Enter') generateVideo();});
 </script>
 </body>
 </html>

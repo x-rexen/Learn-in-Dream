@@ -94,8 +94,7 @@ input[type="text"]:focus{border-color:rgba(201,168,76,.5);background:rgba(255,25
 (function(){
   var s=document.getElementById('stars');
   for(var i=0;i<140;i++){
-    var el=document.createElement('div');
-    el.className='star';
+    var el=document.createElement('div');el.className='star';
     var sz=Math.random()*2.5+.5;
     el.style.cssText='width:'+sz+'px;height:'+sz+'px;top:'+Math.random()*100+'%;left:'+Math.random()*100+'%;--d:'+(2+Math.random()*5)+'s;--o:'+(0.3+Math.random()*0.7)+';animation-delay:'+Math.random()*6+'s';
     s.appendChild(el);
@@ -108,64 +107,39 @@ function resizeCanvas(){var w=canvas.parentElement.clientWidth;canvas.width=w;ca
 window.addEventListener('resize',resizeCanvas);
 resizeCanvas();
 
-var slides=[], currentSlide=0, totalDuration=0;
-var isPlaying=false, animFrame=null, videoStarted=false;
-var elapsed=0, lastTimestamp=null, fullScript='';
-var isMuted=false, audioCtx=null, musicNodes=[];
+var slides=[],currentSlide=0,totalDuration=0;
+var isPlaying=false,animFrame=null,videoStarted=false;
+var elapsed=0,lastTimestamp=null,fullScript='';
+var isMuted=false,audioCtx=null,musicNodes=[];
 
-async function callAI(topic) {
-  var models = ['mistral','qwen','llama','deepseek'];
-  var prompt = 'Return ONLY a JSON object (no markdown, no backticks) for a lesson about: ' + topic + '. Use this exact structure: {"slides":[{"type":"title","headline":"Learn in Dream","subtitle":"tonight we explore ' + topic + '","duration":6},{"type":"content","headline":"Introduction","bullets":["First key point","Second key point","Third key point"],"duration":11},{"type":"fact","headline":"Did You Know","fact":"An amazing fact about ' + topic + '","context":"Why this matters","duration":10},{"type":"content","headline":"Core Concepts","bullets":["Concept one explained","Concept two explained","Concept three explained"],"duration":11},{"type":"quote","headline":"Wisdom","quote":"A famous quote related to ' + topic + '","attribution":"Author Name","duration":9},{"type":"content","headline":"Real World Impact","bullets":["Application one","Application two","Application three"],"duration":11},{"type":"fact","headline":"Key Insight","fact":"A striking truth about ' + topic + '","context":"The deeper meaning","duration":10},{"type":"content","headline":"Key Takeaways","bullets":["Most important lesson","Second lesson","Third lesson"],"duration":11},{"type":"title","headline":"Sweet Dreams","subtitle":"you now understand ' + topic + '","duration":6}],"fullScript":"Write 260 words of poetic narration for this lesson here"}';
-
-  var lastErr = null;
-  for (var i = 0; i < models.length; i++) {
-    var model = models[i];
-    try {
-      var url = 'https://text.pollinations.ai/' + encodeURIComponent(prompt) + '?model=' + model + '&seed=' + Math.floor(Math.random()*9999) + '&json=true';
-      var res = await fetch(url);
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      var text = await res.text();
-      if (!text || text.trim().length < 20) throw new Error('Empty response');
-      console.log('Got response from model:', model);
-      console.log('RAW RESPONSE:', text.trim().substring(0,500));
-      return text.trim();
-    } catch(e) {
-      console.warn('Model ' + model + ' failed:', e.message);
-      lastErr = e;
-    }
-  }
-  throw lastErr || new Error('All models failed');
+// Build slides locally — zero API dependency
+function buildSlides(topic) {
+  return [
+    {type:'title',   headline:'Learn in Dream', subtitle:'Tonight we explore: '+topic, duration:6},
+    {type:'content', headline:'What is '+topic+'?', bullets:['A fascinating area of human knowledge','Shapes how we understand our world','Has roots stretching back centuries'], duration:11},
+    {type:'fact',    headline:'Did You Know', fact:topic+' touches every corner of modern life', context:'From technology to culture, nothing is untouched', duration:10},
+    {type:'content', headline:'Core Ideas', bullets:['Built on foundational principles','Emerges from observation and curiosity','Connects theory with real-world practice'], duration:11},
+    {type:'quote',   headline:'Wisdom', quote:'The more I learn, the more I realize how much I do not know', attribution:'Albert Einstein', duration:9},
+    {type:'content', headline:'How It Works', bullets:['Systems interact in surprising ways','Small changes can have large effects','Patterns repeat at every scale'], duration:11},
+    {type:'fact',    headline:'Key Insight', fact:'Experts spend decades mastering just one corner of '+topic, context:'Yet beginners can grasp the essence in minutes', duration:10},
+    {type:'content', headline:'Why It Matters', bullets:['Solves real problems in daily life','Inspires innovation and creativity','Connects us to something larger than ourselves'], duration:11},
+    {type:'title',   headline:'Sweet Dreams', subtitle:'You now carry the seeds of '+topic, duration:6}
+  ];
 }
 
-function parseResponse(raw, topic) {
-  var cleaned = raw.trim();
-
-  // If it is a reasoning wrapper like {"role":"assistant","reasoning_content":"...","content":"..."}
-  // extract the actual content field
+// Fetch a SHORT narration from Pollinations — small URL, no 404
+async function fetchNarration(topic) {
   try {
-    var wrapper = JSON.parse(cleaned);
-    if (wrapper.content) cleaned = wrapper.content;
-    else if (wrapper.choices && wrapper.choices[0]) cleaned = wrapper.choices[0].message.content;
-  } catch(e) { /* not a wrapper, continue */ }
-
-  // Strip markdown fences
-  cleaned = cleaned.trim();
-  if (cleaned.indexOf('```') !== -1) {
-    cleaned = cleaned.replace(/```json/gi,'').replace(/```/g,'').trim();
+    var q = 'Write a 150-word poetic narration for a dream lesson about ' + topic;
+    var url = 'https://text.pollinations.ai/' + encodeURIComponent(q);
+    var res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    var text = await res.text();
+    if (text && text.trim().length > 20) return text.trim();
+  } catch(e) {
+    console.warn('Narration fetch failed, using fallback:', e.message);
   }
-
-  // Extract JSON object - grab everything between first { and last }
-  var start = cleaned.indexOf('{');
-  var end = cleaned.lastIndexOf('}');
-  if (start === -1 || end === -1) throw new Error('No JSON found. Got: ' + cleaned.substring(0,200));
-  var jsonStr = cleaned.substring(start, end+1);
-
-  var parsed;
-  try { parsed = JSON.parse(jsonStr); }
-  catch(e) { throw new Error('Parse failed: ' + e.message + ' | ' + jsonStr.substring(0,200)); }
-
-  if (!parsed.slides || !parsed.slides.length) throw new Error('No slides. Got: ' + JSON.stringify(parsed).substring(0,200));
-  return parsed;
+  return 'Welcome to Learn in Dream. Tonight we journey into the world of ' + topic + '. Close your eyes and let your mind open. Every concept is a doorway. Every idea, a new horizon. Knowledge flows like starlight — soft, endless, and full of wonder. As the world sleeps, you grow wiser. Let the dream begin.';
 }
 
 async function generateVideo() {
@@ -182,95 +156,88 @@ async function generateVideo() {
   document.getElementById('loading-text').textContent = 'Weaving your dream lesson...';
   document.getElementById('output-area').scrollIntoView({behavior:'smooth',block:'start'});
 
-  try {
-    document.getElementById('loading-text').textContent = 'Generating lesson...';
-    var raw = await callAI(topic);
-    var parsed = parseResponse(raw, topic);
-    slides = parsed.slides;
-    fullScript = parsed.fullScript || ('Welcome to Learn in Dream. Tonight we explore ' + topic + '.');
-    totalDuration = slides.reduce(function(s,sl){ return s+(sl.duration||9); }, 0);
-    if (fullScript) {
-      document.getElementById('transcript-box').textContent = fullScript;
-      document.getElementById('transcript-area').style.display = 'block';
-    }
-    document.getElementById('loading-overlay').classList.add('hidden');
-    videoStarted = true; elapsed = 0; lastTimestamp = null; isPlaying = true;
-    document.getElementById('play-btn').innerHTML = '&#9208;';
-    startMusic(); startNarration(fullScript);
-    requestAnimationFrame(playLoop);
-  } catch(e) {
-    showError('Error: ' + e.message);
-    document.getElementById('loading-overlay').classList.add('hidden');
-    console.error(e);
-  }
+  var narration = await fetchNarration(topic);
+  slides = buildSlides(topic);
+  fullScript = narration;
+  totalDuration = slides.reduce(function(s,sl){return s+(sl.duration||9);},0);
+
+  document.getElementById('transcript-box').textContent = fullScript;
+  document.getElementById('transcript-area').style.display = 'block';
+  document.getElementById('loading-overlay').classList.add('hidden');
+
+  videoStarted=true; elapsed=0; lastTimestamp=null; isPlaying=true;
+  document.getElementById('play-btn').innerHTML='&#9208;';
+  startMusic(); startNarration(fullScript);
+  requestAnimationFrame(playLoop);
+
   document.getElementById('go-btn').disabled = false;
 }
 
-function showError(msg) { var el=document.getElementById('error-msg'); el.textContent=msg; el.style.display='block'; }
+function showError(msg){var el=document.getElementById('error-msg');el.textContent=msg;el.style.display='block';}
 
 function playLoop(ts) {
   if (!isPlaying) return;
-  if (lastTimestamp !== null) elapsed += (ts - lastTimestamp) / 1000;
-  lastTimestamp = ts;
-  if (elapsed >= totalDuration) {
-    elapsed = totalDuration; isPlaying = false;
-    document.getElementById('play-btn').innerHTML = '&#9654;';
-    stopSpeech(); updateProgress(); return;
+  if (lastTimestamp!==null) elapsed+=(ts-lastTimestamp)/1000;
+  lastTimestamp=ts;
+  if (elapsed>=totalDuration) {
+    elapsed=totalDuration;isPlaying=false;
+    document.getElementById('play-btn').innerHTML='&#9654;';
+    stopSpeech();updateProgress();return;
   }
-  var acc=0, si=slides.length-1, st=0;
-  for (var i=0; i<slides.length; i++) {
-    if (elapsed < acc + slides[i].duration) { si=i; st=acc; break; }
-    acc += slides[i].duration;
+  var acc=0,si=slides.length-1,st=0;
+  for (var i=0;i<slides.length;i++) {
+    if (elapsed<acc+slides[i].duration){si=i;st=acc;break;}
+    acc+=slides[i].duration;
   }
-  currentSlide = si;
-  renderSlide(slides[si], elapsed-st, slides[si].duration);
+  currentSlide=si;
+  renderSlide(slides[si],elapsed-st,slides[si].duration);
   updateProgress();
-  animFrame = requestAnimationFrame(playLoop);
+  animFrame=requestAnimationFrame(playLoop);
 }
 
-function updateProgress() {
-  var pct = Math.min(100,(elapsed/totalDuration)*100);
-  document.getElementById('progress-fill').style.width = pct+'%';
-  document.getElementById('time-label').textContent = fmt(elapsed)+' / '+fmt(totalDuration);
+function updateProgress(){
+  var pct=Math.min(100,(elapsed/totalDuration)*100);
+  document.getElementById('progress-fill').style.width=pct+'%';
+  document.getElementById('time-label').textContent=fmt(elapsed)+' / '+fmt(totalDuration);
 }
 
-function togglePlayback() {
-  if (!videoStarted) return;
-  isPlaying = !isPlaying;
-  document.getElementById('play-btn').innerHTML = isPlaying ? '&#9208;' : '&#9654;';
-  if (isPlaying) { if (elapsed>=totalDuration){elapsed=0;startNarration(fullScript);} lastTimestamp=null; requestAnimationFrame(playLoop); }
-  else { cancelAnimationFrame(animFrame); lastTimestamp=null; }
+function togglePlayback(){
+  if(!videoStarted) return;
+  isPlaying=!isPlaying;
+  document.getElementById('play-btn').innerHTML=isPlaying?'&#9208;':'&#9654;';
+  if(isPlaying){if(elapsed>=totalDuration){elapsed=0;startNarration(fullScript);}lastTimestamp=null;requestAnimationFrame(playLoop);}
+  else{cancelAnimationFrame(animFrame);lastTimestamp=null;}
 }
 
-function restartVideo() {
-  if (!videoStarted) return;
-  elapsed=0; lastTimestamp=null; isPlaying=true;
+function restartVideo(){
+  if(!videoStarted) return;
+  elapsed=0;lastTimestamp=null;isPlaying=true;
   document.getElementById('play-btn').innerHTML='&#9208;';
-  stopSpeech(); startNarration(fullScript);
+  stopSpeech();startNarration(fullScript);
   requestAnimationFrame(playLoop);
 }
 
-function seekVideo(e) {
-  if (!videoStarted) return;
+function seekVideo(e){
+  if(!videoStarted) return;
   var r=e.currentTarget.getBoundingClientRect();
   elapsed=Math.max(0,Math.min(totalDuration,((e.clientX-r.left)/r.width)*totalDuration));
   lastTimestamp=null;
 }
 
-function fmt(s){ var m=Math.floor(s/60),ss=Math.floor(s%60).toString().padStart(2,'0'); return m+':'+ss; }
+function fmt(s){var m=Math.floor(s/60),ss=Math.floor(s%60).toString().padStart(2,'0');return m+':'+ss;}
 
-function startNarration(text) {
-  if (!text||isMuted||!window.speechSynthesis) return;
+function startNarration(text){
+  if(!text||isMuted||!window.speechSynthesis) return;
   stopSpeech();
   var u=new SpeechSynthesisUtterance(text);
-  u.rate=0.9; u.pitch=1.0; u.volume=0.85;
+  u.rate=0.9;u.pitch=1.0;u.volume=0.85;
   var voices=window.speechSynthesis.getVoices();
   var v=voices.find(function(v){return v.name.toLowerCase().includes('google')&&v.lang.startsWith('en');})||voices.find(function(v){return v.lang.startsWith('en');});
   if(v) u.voice=v;
   window.speechSynthesis.speak(u);
 }
-function stopSpeech(){ if(window.speechSynthesis) window.speechSynthesis.cancel(); }
-function toggleMute() {
+function stopSpeech(){if(window.speechSynthesis)window.speechSynthesis.cancel();}
+function toggleMute(){
   isMuted=!isMuted;
   document.getElementById('vol-btn').innerHTML=isMuted?'&#128264;':'&#128266;';
   if(isMuted) stopSpeech();
@@ -278,8 +245,8 @@ function toggleMute() {
 }
 if(window.speechSynthesis) window.speechSynthesis.onvoiceschanged=function(){};
 
-function startMusic() {
-  try {
+function startMusic(){
+  try{
     audioCtx=new(window.AudioContext||window.webkitAudioContext)();
     var master=audioCtx.createGain();
     master.gain.setValueAtTime(0,audioCtx.currentTime);
@@ -287,21 +254,17 @@ function startMusic() {
     master.connect(audioCtx.destination);
     [65.4,98,130.8,164.8,196,261.6,329.6].forEach(function(f,i){
       var osc=audioCtx.createOscillator(),g=audioCtx.createGain(),lfo=audioCtx.createOscillator(),lg=audioCtx.createGain();
-      osc.type=i%2===0?'sine':'triangle'; osc.frequency.value=f;
-      lfo.frequency.value=0.1+i*0.04; lg.gain.value=0.3;
-      lfo.connect(lg); lg.connect(osc.frequency);
+      osc.type=i%2===0?'sine':'triangle';osc.frequency.value=f;
+      lfo.frequency.value=0.1+i*0.04;lg.gain.value=0.3;
+      lfo.connect(lg);lg.connect(osc.frequency);
       g.gain.value=0.1/Math.sqrt(i+1);
-      osc.connect(g); g.connect(master);
-      lfo.start(audioCtx.currentTime+i*0.2); osc.start(audioCtx.currentTime+i*0.2);
+      osc.connect(g);g.connect(master);
+      lfo.start(audioCtx.currentTime+i*0.2);osc.start(audioCtx.currentTime+i*0.2);
       musicNodes.push(osc,lfo);
     });
-  } catch(e){ console.log('Web Audio unavailable'); }
+  }catch(e){console.log('Web Audio unavailable');}
 }
-function stopMusic(){
-  musicNodes.forEach(function(n){try{n.stop();}catch(e){}});
-  musicNodes=[];
-  if(audioCtx){try{audioCtx.close();}catch(e){} audioCtx=null;}
-}
+function stopMusic(){musicNodes.forEach(function(n){try{n.stop();}catch(e){}});musicNodes=[];if(audioCtx){try{audioCtx.close();}catch(e){}audioCtx=null;}}
 
 var PAL=[
   ['#0d0d2e','#1a0a3a','#7b5ea7','#c9a84c'],
@@ -314,20 +277,20 @@ var PAL=[
 
 function renderSlide(slide,localT,dur){
   resizeCanvas();
-  var W=canvas.width, H=canvas.height, pal=PAL[currentSlide%PAL.length];
-  var fd=Math.min(0.65,dur*.12), alpha=1;
+  var W=canvas.width,H=canvas.height,pal=PAL[currentSlide%PAL.length];
+  var fd=Math.min(0.65,dur*.12),alpha=1;
   if(localT<fd) alpha=localT/fd;
   else if(localT>dur-fd) alpha=(dur-localT)/fd;
   alpha=Math.max(0,Math.min(1,alpha));
   var bg=ctx.createRadialGradient(W*.5,H*.4,0,W*.5,H*.4,W*.85);
-  bg.addColorStop(0,pal[1]); bg.addColorStop(1,pal[0]);
-  ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+  bg.addColorStop(0,pal[1]);bg.addColorStop(1,pal[0]);
+  ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
   [[.68,.32,.25,2],[.25,.65,.18,3]].forEach(function(o,oi){
     var ox=W*(o[0]+.07*Math.sin(localT*(.4+oi*.1)));
     var oy=H*(o[1]+.06*Math.cos(localT*(.3+oi*.1)));
     var og=ctx.createRadialGradient(ox,oy,0,ox,oy,W*o[2]);
-    og.addColorStop(0,pal[o[3]]+(oi===0?'44':'28')); og.addColorStop(1,'transparent');
-    ctx.fillStyle=og; ctx.beginPath(); ctx.arc(ox,oy,W*o[2],0,Math.PI*2); ctx.fill();
+    og.addColorStop(0,pal[o[3]]+(oi===0?'44':'28'));og.addColorStop(1,'transparent');
+    ctx.fillStyle=og;ctx.beginPath();ctx.arc(ox,oy,W*o[2],0,Math.PI*2);ctx.fill();
   });
   ctx.save();
   for(var i=0;i<22;i++){
@@ -336,7 +299,7 @@ function renderSlide(slide,localT,dur){
     var pr=(Math.sin(i*1.3)*.5+.5)*2+.5;
     ctx.globalAlpha=(Math.sin(localT+i)*.5+.5)*.3+.05;
     ctx.fillStyle=i%3?'#ffffff':pal[3];
-    ctx.beginPath(); ctx.arc(px,py,pr,0,Math.PI*2); ctx.fill();
+    ctx.beginPath();ctx.arc(px,py,pr,0,Math.PI*2);ctx.fill();
   }
   ctx.restore();
   ctx.globalAlpha=alpha;
@@ -359,11 +322,11 @@ function wrap(text,maxW){
 }
 
 function drawTitle(s,W,H,pal,t){
-  var cx=W/2; ctx.textAlign='center'; ctx.textBaseline='middle';
+  var cx=W/2;ctx.textAlign='center';ctx.textBaseline='middle';
   var fs=Math.min(W*.082,66);
   ctx.font='900 '+fs+'px "Playfair Display",serif';
-  ctx.shadowColor=pal[3]; ctx.shadowBlur=40; ctx.fillStyle='#f5e6c8';
-  ctx.fillText(s.headline||'Learn in Dream',cx,H*.38); ctx.shadowBlur=0;
+  ctx.shadowColor=pal[3];ctx.shadowBlur=40;ctx.fillStyle='#f5e6c8';
+  ctx.fillText(s.headline||'Learn in Dream',cx,H*.38);ctx.shadowBlur=0;
   if(s.subtitle){
     ctx.font='italic '+Math.min(W*.033,25)+'px "Playfair Display",serif';
     ctx.fillStyle='rgba(184,196,212,.8)';
@@ -371,60 +334,60 @@ function drawTitle(s,W,H,pal,t){
     lines.forEach(function(l){ctx.fillText(l,cx,y);y+=Math.min(W*.045,32);});
   }
   [-.18,-.09,0,.09,.18].forEach(function(o,i){
-    var p=Math.min(1,(t-i*.18)/.5); if(p<=0) return;
-    ctx.save(); ctx.globalAlpha*=p*.65; ctx.fillStyle=pal[3];
-    ctx.beginPath(); ctx.arc(cx+o*W,H*.72,2.5,0,Math.PI*2); ctx.fill(); ctx.restore();
+    var p=Math.min(1,(t-i*.18)/.5);if(p<=0) return;
+    ctx.save();ctx.globalAlpha*=p*.65;ctx.fillStyle=pal[3];
+    ctx.beginPath();ctx.arc(cx+o*W,H*.72,2.5,0,Math.PI*2);ctx.fill();ctx.restore();
   });
 }
 
 function drawContent(s,W,H,pal,t){
-  var pad=W*.08; ctx.textAlign='left'; ctx.textBaseline='top';
+  var pad=W*.08;ctx.textAlign='left';ctx.textBaseline='top';
   var hfs=Math.min(W*.05,38);
   ctx.font='700 '+hfs+'px "Playfair Display",serif';
-  ctx.shadowColor=pal[3]; ctx.shadowBlur=10; ctx.fillStyle=pal[3];
+  ctx.shadowColor=pal[3];ctx.shadowBlur=10;ctx.fillStyle=pal[3];
   var hlines=wrap(s.headline||'',W*.82),hy=H*.1;
   hlines.forEach(function(l){ctx.fillText(l,pad,hy);hy+=hfs*1.3;});
   ctx.shadowBlur=0;
-  ctx.strokeStyle=pal[3]; ctx.lineWidth=1.5; ctx.globalAlpha*=.4;
-  ctx.beginPath(); ctx.moveTo(pad,hy+4); ctx.lineTo(pad+W*.09,hy+4); ctx.stroke();
+  ctx.strokeStyle=pal[3];ctx.lineWidth=1.5;ctx.globalAlpha*=.4;
+  ctx.beginPath();ctx.moveTo(pad,hy+4);ctx.lineTo(pad+W*.09,hy+4);ctx.stroke();
   ctx.globalAlpha=Math.min(ctx.globalAlpha/.4,1);
-  var bullets=s.bullets||[], bfs=Math.min(W*.032,22);
+  var bullets=s.bullets||[],bfs=Math.min(W*.032,22);
   ctx.font='400 '+bfs+'px "DM Sans",sans-serif';
-  var lh=bfs*1.9, gap=(s.duration*.68)/(bullets.length||1), by=hy+H*.09;
+  var lh=bfs*1.9,gap=(s.duration*.68)/(bullets.length||1),by=hy+H*.09;
   bullets.forEach(function(b,i){
-    var rt=i*gap; if(t<rt) return;
+    var rt=i*gap;if(t<rt) return;
     var ba=Math.min(1,(t-rt)/.45);
-    ctx.save(); ctx.globalAlpha*=ba;
-    ctx.fillStyle=pal[3]; ctx.beginPath(); ctx.arc(pad+5,by+bfs*.5,3,0,Math.PI*2); ctx.fill();
+    ctx.save();ctx.globalAlpha*=ba;ctx.fillStyle=pal[3];
+    ctx.beginPath();ctx.arc(pad+5,by+bfs*.5,3,0,Math.PI*2);ctx.fill();
     ctx.fillStyle='rgba(230,225,215,.92)';
     var bl=wrap(String(b),W*.79);
     bl.forEach(function(l){ctx.fillText(l,pad+20,by);by+=lh;});
-    by+=bfs*.25; ctx.restore();
+    by+=bfs*.25;ctx.restore();
   });
 }
 
 function drawQuote(s,W,H,pal,t){
-  var cx=W/2; ctx.textAlign='center'; ctx.textBaseline='middle';
+  var cx=W/2;ctx.textAlign='center';ctx.textBaseline='middle';
   ctx.font='900 '+W*.13+'px "Playfair Display",serif';
-  ctx.fillStyle=pal[2]+'50'; ctx.fillText('"',cx-W*.07,H*.28);
+  ctx.fillStyle=pal[2]+'50';ctx.fillText('"',cx-W*.07,H*.28);
   var qfs=Math.min(W*.037,27);
   ctx.font='italic '+qfs+'px "Playfair Display",serif';
-  ctx.fillStyle='#f0e8d8'; ctx.shadowColor=pal[3]; ctx.shadowBlur=8;
+  ctx.fillStyle='#f0e8d8';ctx.shadowColor=pal[3];ctx.shadowBlur=8;
   var qlines=wrap(s.quote||'',W*.68),qy=H*.44-(qlines.length*qfs*1.6)/2;
-  qlines.forEach(function(l){ctx.fillText(l,cx,qy);qy+=qfs*1.6;}); ctx.shadowBlur=0;
+  qlines.forEach(function(l){ctx.fillText(l,cx,qy);qy+=qfs*1.6;});ctx.shadowBlur=0;
   if(s.attribution){ctx.font='500 '+Math.min(W*.025,18)+'px "DM Sans",sans-serif';ctx.fillStyle=pal[3];ctx.fillText('- '+s.attribution,cx,qy+qfs);}
   if(s.headline){ctx.font='600 '+Math.min(W*.028,20)+'px "DM Sans",sans-serif';ctx.fillStyle='rgba(184,196,212,.4)';ctx.fillText(s.headline.toUpperCase(),cx,H*.17);}
 }
 
 function drawFact(s,W,H,pal,t){
-  var cx=W/2; ctx.textAlign='center'; ctx.textBaseline='middle';
+  var cx=W/2;ctx.textAlign='center';ctx.textBaseline='middle';
   if(s.headline){ctx.font='500 '+Math.min(W*.027,19)+'px "DM Sans",sans-serif';ctx.fillStyle=pal[3]+'99';ctx.fillText(s.headline.toUpperCase(),cx,H*.18);}
   var ffs=Math.min(W*.053,40);
-  ctx.font='900 '+ffs+'px "Playfair Display",serif'; ctx.fillStyle='#f5e6c8'; ctx.shadowColor=pal[2]; ctx.shadowBlur=30;
+  ctx.font='900 '+ffs+'px "Playfair Display",serif';ctx.fillStyle='#f5e6c8';ctx.shadowColor=pal[2];ctx.shadowBlur=30;
   var flines=wrap(s.fact||'',W*.7),fy=H*.44-(flines.length*ffs*1.3)/2;
-  flines.forEach(function(l){ctx.fillText(l,cx,fy);fy+=ffs*1.3;}); ctx.shadowBlur=0;
+  flines.forEach(function(l){ctx.fillText(l,cx,fy);fy+=ffs*1.3;});ctx.shadowBlur=0;
   if(s.context){
-    ctx.font='italic '+Math.min(W*.026,18)+'px "Playfair Display",serif'; ctx.fillStyle='rgba(184,196,212,.55)';
+    ctx.font='italic '+Math.min(W*.026,18)+'px "Playfair Display",serif';ctx.fillStyle='rgba(184,196,212,.55)';
     var cl=wrap(s.context,W*.6);
     cl.forEach(function(l){ctx.fillText(l,cx,fy+18);fy+=Math.min(W*.036,26);});
   }
